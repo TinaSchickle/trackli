@@ -237,11 +237,12 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
         </table>
       </div>
       <div className="sheet-legend">
-        Zervixschleim: Ø nichts · f feucht · S cremig · S+ spinnbar/glasig · W wässrig
-        &nbsp;—&nbsp; Muttermund: g geschlossen · m mittel · o offen
-        &nbsp;—&nbsp; Spucke:{' '}
-        <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
-        <FernIcon level={2} /> vollständiges Farnkraut-Muster
+        <div>Zervixschleim: Ø nichts · f feucht · S cremig · S+ spinnbar/glasig · W wässrig</div>
+        <div>Muttermund: g geschlossen · m mittel · o offen</div>
+        <div>
+          Spucke: <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
+          <FernIcon level={2} /> vollständiges Farnkraut-Muster
+        </div>
       </div>
     </div>
   );
