@@ -257,6 +257,88 @@ textarea:focus-visible {
   margin-top: 6px;
 }
 
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--color-text-soft);
+  padding: 4px 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--color-muschel-light);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  padding: 2px;
+}
+
+.calendar-day.empty {
+  background: none;
+  border: none;
+  cursor: default;
+}
+
+.calendar-day.out-of-cycle {
+  opacity: 0.45;
+}
+
+.calendar-day.has-entry {
+  background: var(--color-muschel);
+}
+
+.calendar-day.is-period {
+  background: var(--color-period);
+  color: #fff;
+}
+
+.calendar-day.is-today {
+  border-color: var(--color-rauchblau);
+}
+
+.calendar-day-num {
+  font-weight: 600;
+}
+
+.calendar-day-temp {
+  font-size: 0.6rem;
+  color: var(--color-text-soft);
+}
+
+.calendar-day.is-period .calendar-day-temp {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.calendar-day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-ton);
+}
+
+.calendar-day.is-period .calendar-day-dot {
+  background: #fff;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;

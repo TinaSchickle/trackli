@@ -1,5 +1,6 @@
 const TABS = [
   { key: 'entry', label: 'Eintrag' },
+  { key: 'calendar', label: 'Kalender' },
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'archive', label: 'Verlauf' },
 ];

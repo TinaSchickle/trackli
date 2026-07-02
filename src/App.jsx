@@ -3,6 +3,7 @@ import { getAllEntries } from './db.js';
 import { segmentIntoCycles } from './utils/cycles.js';
 import { archiveCycleChart } from './utils/chartExport.js';
 import EntryForm from './components/EntryForm.jsx';
+import CycleCalendar from './components/CycleCalendar.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ArchivedCharts from './components/ArchivedCharts.jsx';
 import CycleChart from './components/CycleChart.jsx';
@@ -71,6 +72,9 @@ export default function App() {
 
       <div className="screen">
         {tab === 'entry' && <EntryForm onSaved={handleEntrySaved} />}
+        {tab === 'calendar' && (
+          <CycleCalendar cycle={currentCycle} entries={entries} onSaved={handleEntrySaved} />
+        )}
         {tab === 'dashboard' && <Dashboard cycles={cycles} />}
         {tab === 'archive' && <ArchivedCharts />}
       </div>
