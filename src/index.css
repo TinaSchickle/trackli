@@ -456,6 +456,17 @@ textarea:focus-visible {
   line-height: 1.5;
 }
 
+.fern-icon {
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--color-rauchblau-dark);
+}
+
+.cycle-sheet td .fern-icon {
+  display: block;
+  margin: 0 auto;
+}
+
 /* ── Datums-Navigation im Eintrag-Tab ────────────────── */
 
 .date-nav {

@@ -17,6 +17,56 @@ const CERVIX_SYMBOLS = {
   'Offen/weich': 'o',
 };
 
+const FERNING_LEVELS = {
+  'Kein Farnkraut-Muster': 0,
+  'Teilweises Farnkraut-Muster': 1,
+  'Vollständiges Farnkraut-Muster': 2,
+};
+
+// Bildliche Darstellung des Farnkraut-Musters (Spucke-Test):
+// 0 = nur Punkte (kein Muster), 1 = halber Farnwedel, 2 = ganzer Farnwedel.
+function FernIcon({ level }) {
+  const stroke = 'currentColor';
+  if (level === 0) {
+    return (
+      <svg className="fern-icon" viewBox="0 0 20 18" width="16" height="15" aria-hidden="true">
+        <circle cx="6" cy="5" r="1.3" fill={stroke} />
+        <circle cx="13" cy="4" r="1.3" fill={stroke} />
+        <circle cx="9" cy="10" r="1.3" fill={stroke} />
+        <circle cx="15" cy="12" r="1.3" fill={stroke} />
+        <circle cx="5" cy="13" r="1.3" fill={stroke} />
+      </svg>
+    );
+  }
+  const branches =
+    level === 1
+      ? [[15, 8.5], [12, 7.5]] // nur untere Hälfte: halbes Muster
+      : [[15, 8.5], [12, 7.5], [9, 6.5], [6, 5.5]];
+  return (
+    <svg
+      className="fern-icon"
+      viewBox="0 0 20 18"
+      width="16"
+      height="15"
+      aria-hidden="true"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    >
+      <line x1="10" y1="2" x2="10" y2="16" />
+      {branches.map(([y, dx]) => (
+        <g key={y}>
+          <line x1="10" y1={y} x2={10 - dx + 3} y2={y - 4} />
+          <line x1="10" y1={y} x2={10 + dx - 3} y2={y - 4} />
+        </g>
+      ))}
+      {level === 1 && <circle cx="6" cy="4" r="1.1" fill={stroke} stroke="none" />}
+      {level === 1 && <circle cx="14" cy="3.5" r="1.1" fill={stroke} stroke="none" />}
+    </svg>
+  );
+}
+
 const MAX_DAY = 40;
 // Temperaturskala in Hundertstel °C, damit keine Float-Rundungsfehler entstehen.
 const TEMP_STEP = 5; // 0,05 °C pro Zeile
@@ -157,6 +207,16 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                 </td>
               ))}
             </tr>
+            <tr>
+              <th className="sheet-label">Spucke</th>
+              {days.map((d) => (
+                <td key={d.iso} data-iso={d.iso} className={colClass(d)} title={d.entry?.ferning ?? ''}>
+                  {d.entry?.ferning in FERNING_LEVELS && (
+                    <FernIcon level={FERNING_LEVELS[d.entry.ferning]} />
+                  )}
+                </td>
+              ))}
+            </tr>
             {tempRows.map((v) => (
               <tr key={v} className="sheet-temp-row">
                 <th className={`sheet-label sheet-temp-label${v % 10 === 0 ? ' is-major' : ''}`}>
@@ -179,6 +239,9 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
       <div className="sheet-legend">
         Zervixschleim: Ø nichts · f feucht · S cremig · S+ spinnbar/glasig · W wässrig
         &nbsp;—&nbsp; Muttermund: g geschlossen · m mittel · o offen
+        &nbsp;—&nbsp; Spucke:{' '}
+        <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
+        <FernIcon level={2} /> vollständiges Farnkraut-Muster
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ function emptyEntry(dateIso) {
     ferning: '',
     notes: '',
     isPeriodStart: false,
+    excluded: false,
   };
 }
 
@@ -101,10 +102,14 @@ export default function EntryForm({ entries = [], date, onDateChange, onSaved })
     e.preventDefault();
     const toSave = {
       ...form,
-      temperature: form.temperature === '' ? null : Number(form.temperature),
+      temperature:
+        form.temperature === '' || form.temperature == null
+          ? null
+          : Number(form.temperature),
       cervicalMucus: form.cervicalMucus || null,
       cervix: form.cervix || null,
       ferning: form.ferning || null,
+      excluded: !!form.excluded,
     };
     await putEntry(toSave);
     setSaved(true);
@@ -233,6 +238,18 @@ export default function EntryForm({ entries = [], date, onDateChange, onSaved })
         />
         <label htmlFor="periodStart" style={{ margin: 0 }}>
           Periodenbeginn (markiert Zyklusstart)
+        </label>
+      </div>
+
+      <div className="field checkbox-row">
+        <input
+          id="excludeValue"
+          type="checkbox"
+          checked={form.excluded ?? false}
+          onChange={(e) => update('excluded', e.target.checked)}
+        />
+        <label htmlFor="excludeValue" style={{ margin: 0 }}>
+          Exkludiere diesen Wert von der Messung TODO
         </label>
       </div>
 
