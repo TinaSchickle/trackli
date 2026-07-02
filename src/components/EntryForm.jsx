@@ -35,6 +35,14 @@ function emptyEntry(dateIso) {
   };
 }
 
+// Zerlegt einen gespeicherten Temperaturwert in Vor- und Nachkommateil.
+// Ohne Wert: Vorkomma-Vorgabe 36, Nachkomma leer (leer = keine Messung).
+function splitTemp(temperature) {
+  if (temperature === '' || temperature == null) return ['36', ''];
+  const [intPart, decPart] = String(temperature).split('.');
+  return [intPart, decPart ?? '0'];
+}
+
 export default function EntryForm({ entries = [], date, onDateChange, onSaved }) {
   const activeDate = date ?? todayIso();
 
@@ -47,11 +55,16 @@ export default function EntryForm({ entries = [], date, onDateChange, onSaved })
   const [form, setForm] = useState(
     () => entryByDate.get(activeDate) ?? emptyEntry(activeDate)
   );
+  const [[tempInt, tempDec], setTempParts] = useState(() =>
+    splitTemp((entryByDate.get(activeDate) ?? {}).temperature)
+  );
   const [saved, setSaved] = useState(false);
 
   // Beim Datumswechsel die Werte des gewählten Tages laden (oder leeres Formular).
   useEffect(() => {
-    setForm(entryByDate.get(activeDate) ?? emptyEntry(activeDate));
+    const loaded = entryByDate.get(activeDate) ?? emptyEntry(activeDate);
+    setForm(loaded);
+    setTempParts(splitTemp(loaded.temperature));
     setSaved(false);
     // entryByDate absichtlich nicht als Dependency: lokale, noch ungespeicherte
     // Änderungen sollen beim Speichern anderer Einträge nicht verworfen werden.
@@ -73,6 +86,15 @@ export default function EntryForm({ entries = [], date, onDateChange, onSaved })
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     setSaved(false);
+  }
+
+  // Nachkomma leer = keine Messung; erst mit Nachkommawert entsteht eine Temperatur.
+  function changeTemp(intPart, decPart) {
+    setTempParts([intPart, decPart]);
+    update(
+      'temperature',
+      decPart === '' || intPart === '' ? '' : `${intPart}.${decPart}`
+    );
   }
 
   async function handleSubmit(e) {
@@ -122,17 +144,33 @@ export default function EntryForm({ entries = [], date, onDateChange, onSaved })
       </div>
 
       <div className="field">
-        <label htmlFor="temperature">Temperatur (°C)</label>
-        <input
-          id="temperature"
-          type="number"
-          step="0.01"
-          min="34"
-          max="42"
-          placeholder="z. B. 36.45"
-          value={form.temperature}
-          onChange={(e) => update('temperature', e.target.value)}
-        />
+        <label htmlFor="tempInt">Temperatur (°C)</label>
+        <div className="temp-split">
+          <input
+            id="tempInt"
+            type="number"
+            min="34"
+            max="41"
+            step="1"
+            aria-label="Temperatur Vorkommastelle"
+            value={tempInt}
+            onChange={(e) => changeTemp(e.target.value, tempDec)}
+            onBlur={() => { if (tempInt === '') changeTemp('36', tempDec); }}
+          />
+          <span className="temp-comma" aria-hidden="true">,</span>
+          <input
+            id="tempDec"
+            type="text"
+            inputMode="numeric"
+            maxLength={2}
+            placeholder="45"
+            aria-label="Temperatur Nachkommastellen"
+            value={tempDec}
+            onChange={(e) =>
+              changeTemp(tempInt, e.target.value.replace(/\D/g, '').slice(0, 2))
+            }
+          />
+        </div>
       </div>
 
       <div className="field">

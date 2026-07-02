@@ -474,3 +474,30 @@ textarea:focus-visible {
   font-size: 1.2rem;
   line-height: 1;
 }
+
+/* Temperatur: getrennte Vor-/Nachkomma-Eingabe */
+
+.temp-split {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field .temp-split input,
+.temp-split input {
+  width: 90px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.temp-comma {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
