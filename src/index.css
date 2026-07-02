@@ -344,3 +344,133 @@ textarea:focus-visible {
   padding: 40px 20px;
   color: var(--color-text-soft);
 }
+
+/* ── Sensiplan-Zyklusblatt ───────────────────────────── */
+
+.sheet-card {
+  padding: 14px 12px 12px;
+}
+
+.sheet-scroll {
+  overflow-x: auto;
+  cursor: pointer;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cycle-sheet {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cycle-sheet td,
+.cycle-sheet th {
+  border: 1px solid var(--color-line);
+  width: 27px;
+  min-width: 27px;
+  max-width: 27px;
+  height: 20px;
+  padding: 0;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 400;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cycle-sheet th.sheet-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 88px;
+  min-width: 88px;
+  max-width: 88px;
+  background: var(--color-surface);
+  text-align: left;
+  padding: 0 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.cycle-sheet td.sheet-daynum {
+  font-weight: 600;
+  background: var(--color-muschel-light);
+}
+
+.cycle-sheet td.is-period-day {
+  background: var(--color-period);
+  color: #fff;
+  font-weight: 600;
+}
+
+.cycle-sheet td.is-today-col {
+  background: rgba(124, 147, 160, 0.22);
+}
+
+.cycle-sheet td.is-period-day.is-today-col {
+  background: var(--color-period);
+}
+
+.sheet-temp-row td,
+.sheet-temp-row th.sheet-label {
+  height: 13px;
+}
+
+.sheet-temp-row th.sheet-temp-label {
+  font-weight: 400;
+  font-size: 0.6rem;
+  color: var(--color-text-soft);
+}
+
+.sheet-temp-row th.sheet-temp-label.is-major {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sheet-temp-row td {
+  border-color: color-mix(in srgb, var(--color-line) 55%, transparent);
+}
+
+.sheet-temp-row td.is-major {
+  border-top-color: var(--color-line);
+}
+
+.sheet-temp-row td.is-today-col {
+  background: rgba(124, 147, 160, 0.18);
+}
+
+.temp-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-ton-dark);
+  vertical-align: middle;
+}
+
+.sheet-legend {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--color-text-soft);
+  line-height: 1.5;
+}
+
+/* ── Datums-Navigation im Eintrag-Tab ────────────────── */
+
+.date-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.date-nav input[type="date"] {
+  flex: 1;
+}
+
+.date-nav-btn {
+  width: 44px;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+}

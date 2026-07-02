@@ -1,55 +1,30 @@
-import { useMemo, useState } from 'react';
-import EntryForm from './EntryForm.jsx';
+import { useEffect, useMemo, useRef } from 'react';
+import { parseIso, toIso, todayIso, addDays } from '../utils/dates.js';
 
-const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const MONTH_NAMES = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-];
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']; // Index = Date.getDay()
 
-function parseIso(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
+const MUCUS_SYMBOLS = {
+  'Nichts spürbar/sichtbar': 'Ø',
+  'Feucht': 'f',
+  'Cremig': 'S',
+  'Spinnbar/glasig (Höhepunkt)': 'S+',
+  'Wässrig': 'W',
+};
 
-function toIso(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+const CERVIX_SYMBOLS = {
+  'Geschlossen/fest': 'g',
+  'Leicht geöffnet/mittel': 'm',
+  'Offen/weich': 'o',
+};
 
-function formatDate(iso) {
-  const [y, m, d] = iso.split('-');
-  return `${d}.${m}.${y}`;
-}
+const MAX_DAY = 40;
+// Temperaturskala in Hundertstel °C, damit keine Float-Rundungsfehler entstehen.
+const TEMP_STEP = 5; // 0,05 °C pro Zeile
+const TEMP_MIN = 3600; // 36,0 °C
+const TEMP_BASE_MAX = 3700; // 37,0 °C – wird bei höheren Messwerten erweitert
 
-function buildMonthGrid(year, month) {
-  const firstDay = new Date(year, month, 1);
-  const startWeekday = (firstDay.getDay() + 6) % 7; // Montag = 0
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-}
-
-function emptyEntry(dateIso) {
-  return {
-    id: crypto.randomUUID(),
-    date: dateIso,
-    temperature: '',
-    cervicalMucus: '',
-    cervix: '',
-    ferning: '',
-    notes: '',
-    isPeriodStart: false,
-  };
-}
-
-export default function CycleCalendar({ cycle, entries, onSaved }) {
-  const [selectedDate, setSelectedDate] = useState(null);
+export default function CycleCalendar({ cycle, entries, onSelectDay }) {
+  const scrollRef = useRef(null);
 
   const entryByDate = useMemo(() => {
     const map = new Map();
@@ -57,98 +32,154 @@ export default function CycleCalendar({ cycle, entries, onSaved }) {
     return map;
   }, [entries]);
 
-  const todayIso = toIso(new Date());
+  const today = todayIso();
 
-  const months = useMemo(() => {
+  // Tag 1 = Zyklusbeginn (Periodenbeginn), Tag 0 = Vortag, bis Tag 40.
+  const days = useMemo(() => {
     if (!cycle) return [];
     const start = parseIso(cycle.startDate);
-    const lastEntryIso = cycle.entries.length
-      ? cycle.entries[cycle.entries.length - 1].date
-      : cycle.startDate;
-    const endIso = lastEntryIso > todayIso ? lastEntryIso : todayIso;
-    const end = parseIso(endIso);
-
     const list = [];
-    let y = start.getFullYear();
-    let m = start.getMonth();
-    while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
-      list.push({ year: y, month: m });
-      m++;
-      if (m > 11) { m = 0; y++; }
+    for (let i = 0; i <= MAX_DAY; i++) {
+      const date = addDays(start, i - 1);
+      const iso = toIso(date);
+      list.push({ dayNum: i, iso, date, entry: entryByDate.get(iso) });
     }
     return list;
-  }, [cycle, todayIso]);
+  }, [cycle, entryByDate]);
+
+  const tempRows = useMemo(() => {
+    let top = TEMP_BASE_MAX;
+    days.forEach(({ entry }) => {
+      if (typeof entry?.temperature === 'number') {
+        const cents = Math.round(entry.temperature * 100);
+        if (cents > top) top = Math.ceil(cents / TEMP_STEP) * TEMP_STEP;
+      }
+    });
+    const rows = [];
+    for (let v = top; v >= TEMP_MIN; v -= TEMP_STEP) rows.push(v);
+    return rows;
+  }, [days]);
+
+  const topTemp = tempRows.length ? tempRows[0] : TEMP_BASE_MAX;
+
+  // Heutige Spalte beim Öffnen in die Mitte scrollen.
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const cell = container.querySelector('td.is-today-col');
+    if (cell) {
+      container.scrollLeft =
+        cell.offsetLeft + cell.offsetWidth / 2 - container.clientWidth / 2;
+    }
+  }, [cycle]);
 
   if (!cycle) {
-    return <div className="card empty-state">Noch kein aktueller Zyklus erfasst.</div>;
+    return (
+      <div
+        className="card empty-state"
+        style={{ cursor: 'pointer' }}
+        onClick={() => onSelectDay?.(today)}
+      >
+        Noch kein aktueller Zyklus erfasst.
+        <br />
+        Tippe hier, um den ersten Eintrag anzulegen.
+      </div>
+    );
+  }
+
+  function tempRowFor(entry) {
+    if (typeof entry?.temperature !== 'number') return null;
+    let cents = Math.round(entry.temperature / (TEMP_STEP / 100)) * TEMP_STEP;
+    if (cents < TEMP_MIN) cents = TEMP_MIN;
+    if (cents > topTemp) cents = topTemp;
+    return cents;
+  }
+
+  // Klick irgendwo auf das Blatt: getroffene Tagesspalte öffnen, sonst heute.
+  function handleClick(e) {
+    const cell = e.target.closest('[data-iso]');
+    onSelectDay?.(cell?.dataset.iso ?? today);
+  }
+
+  function colClass(day, extra = '') {
+    const classes = [extra];
+    if (day.iso === today) classes.push('is-today-col');
+    return classes.filter(Boolean).join(' ');
   }
 
   return (
-    <div>
-      {months.map(({ year, month }) => (
-        <div className="card" key={`${year}-${month}`}>
-          <h3 style={{ fontSize: '1rem' }}>{MONTH_NAMES[month]} {year}</h3>
-          <div className="calendar-weekdays">
-            {WEEKDAYS.map((w) => (
-              <div key={w} className="calendar-weekday">{w}</div>
-            ))}
-          </div>
-          <div className="calendar-grid">
-            {buildMonthGrid(year, month).map((date, i) => {
-              if (!date) return <div key={i} className="calendar-day empty" />;
-              const iso = toIso(date);
-              const entry = entryByDate.get(iso);
-              const inCycle =
-                iso >= cycle.startDate && iso <= (cycle.endDate ?? todayIso);
-              const classes = ['calendar-day'];
-              if (entry) classes.push('has-entry');
-              if (entry?.isPeriodStart) classes.push('is-period');
-              if (iso === todayIso) classes.push('is-today');
-              if (!inCycle) classes.push('out-of-cycle');
-
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  className={classes.join(' ')}
-                  onClick={() => setSelectedDate(iso)}
+    <div className="card sheet-card">
+      <h3 style={{ fontSize: '1rem' }}>Zyklus ab {cycle.startDate.split('-').reverse().join('.')}</h3>
+      <div className="sheet-scroll" ref={scrollRef} onClick={handleClick}>
+        <table className="cycle-sheet">
+          <tbody>
+            <tr>
+              <th className="sheet-label">Tag</th>
+              {days.map((d) => (
+                <td key={d.iso} data-iso={d.iso} className={colClass(d, 'sheet-daynum')}>
+                  {d.dayNum}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th className="sheet-label">Datum</th>
+              {days.map((d) => (
+                <td
+                  key={d.iso}
+                  data-iso={d.iso}
+                  className={colClass(d, d.entry?.isPeriodStart ? 'is-period-day' : '')}
                 >
-                  <span className="calendar-day-num">{date.getDate()}</span>
-                  {typeof entry?.temperature === 'number' && (
-                    <span className="calendar-day-temp">
-                      {entry.temperature.toFixed(2)}
-                    </span>
-                  )}
-                  {entry && <span className="calendar-day-dot" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {selectedDate && (
-        <div className="modal-backdrop" onClick={() => setSelectedDate(null)}>
-          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-            <h3>{formatDate(selectedDate)}</h3>
-            <EntryForm
-              existingEntry={entryByDate.get(selectedDate) ?? emptyEntry(selectedDate)}
-              onSaved={(saved) => {
-                onSaved?.(saved);
-                setSelectedDate(null);
-              }}
-            />
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ width: '100%', marginTop: 10 }}
-              onClick={() => setSelectedDate(null)}
-            >
-              Schließen
-            </button>
-          </div>
-        </div>
-      )}
+                  {d.date.getDate()}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th className="sheet-label">Wochentag</th>
+              {days.map((d) => (
+                <td key={d.iso} data-iso={d.iso} className={colClass(d)}>
+                  {WEEKDAYS[d.date.getDay()]}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th className="sheet-label">Zervixschleim</th>
+              {days.map((d) => (
+                <td key={d.iso} data-iso={d.iso} className={colClass(d)} title={d.entry?.cervicalMucus ?? ''}>
+                  {MUCUS_SYMBOLS[d.entry?.cervicalMucus] ?? ''}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th className="sheet-label">Muttermund</th>
+              {days.map((d) => (
+                <td key={d.iso} data-iso={d.iso} className={colClass(d)} title={d.entry?.cervix ?? ''}>
+                  {CERVIX_SYMBOLS[d.entry?.cervix] ?? ''}
+                </td>
+              ))}
+            </tr>
+            {tempRows.map((v) => (
+              <tr key={v} className="sheet-temp-row">
+                <th className={`sheet-label sheet-temp-label${v % 10 === 0 ? ' is-major' : ''}`}>
+                  {(v / 100).toFixed(2).replace('.', ',')}
+                </th>
+                {days.map((d) => (
+                  <td
+                    key={d.iso}
+                    data-iso={d.iso}
+                    className={colClass(d, v % 10 === 0 ? 'is-major' : '')}
+                  >
+                    {tempRowFor(d.entry) === v && <span className="temp-dot" />}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="sheet-legend">
+        Zervixschleim: Ø nichts · f feucht · S cremig · S+ spinnbar/glasig · W wässrig
+        &nbsp;—&nbsp; Muttermund: g geschlossen · m mittel · o offen
+      </div>
     </div>
   );
 }

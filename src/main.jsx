@@ -9,7 +9,10 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-if ('serviceWorker' in navigator) {
+// Nur im Prod-Build registrieren: der cache-first Service Worker würde im
+// Dev-Modus Vite-Module einfrieren und nach Dep-Reoptimierung doppelte
+// React-Kopien ausliefern ("Invalid hook call").
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register(`${import.meta.env.BASE_URL}service-worker.js`)

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAllEntries } from './db.js';
 import { segmentIntoCycles } from './utils/cycles.js';
+import { todayIso } from './utils/dates.js';
 import { archiveCycleChart } from './utils/chartExport.js';
 import EntryForm from './components/EntryForm.jsx';
 import CycleCalendar from './components/CycleCalendar.jsx';
@@ -14,6 +15,7 @@ export default function App() {
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState('entry');
+  const [selectedDate, setSelectedDate] = useState(todayIso());
   const [showBackup, setShowBackup] = useState(false);
   const hiddenChartRef = useRef(null);
 
@@ -71,9 +73,23 @@ export default function App() {
       </header>
 
       <div className="screen">
-        {tab === 'entry' && <EntryForm onSaved={handleEntrySaved} />}
+        {tab === 'entry' && (
+          <EntryForm
+            entries={entries}
+            date={selectedDate}
+            onDateChange={setSelectedDate}
+            onSaved={handleEntrySaved}
+          />
+        )}
         {tab === 'calendar' && (
-          <CycleCalendar cycle={currentCycle} entries={entries} onSaved={handleEntrySaved} />
+          <CycleCalendar
+            cycle={currentCycle}
+            entries={entries}
+            onSelectDay={(iso) => {
+              setSelectedDate(iso);
+              setTab('entry');
+            }}
+          />
         )}
         {tab === 'dashboard' && <Dashboard cycles={cycles} />}
         {tab === 'archive' && <ArchivedCharts />}
