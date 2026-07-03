@@ -648,10 +648,10 @@ textarea:focus-visible {
 .period-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
   text-align: left;
-  padding: 5px 9px;
+  padding: 4px 8px;
   margin-bottom: 0;
   border: 1px solid var(--color-line);
   border-radius: 9px;
@@ -665,22 +665,22 @@ textarea:focus-visible {
   border-color: var(--color-period);
 }
 
-.period-toggle-icon { font-size: 0.95rem; }
+.period-toggle-icon { font-size: 0.88rem; }
 
 .period-toggle strong {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .period-toggle small {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--color-text-soft);
 }
 
 .period-toggle-state {
   margin-left: auto;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--color-period);
   font-weight: 700;
 }
@@ -872,8 +872,8 @@ textarea:focus-visible {
 }
 .messart-row .segmented { gap: 3px; }
 .messart-row .segmented button {
-  padding: 2px 7px;
-  font-size: 0.7rem;
+  padding: 1px 6px;
+  font-size: 0.64rem;
   border-radius: 6px;
   color: var(--color-text-soft);
 }
