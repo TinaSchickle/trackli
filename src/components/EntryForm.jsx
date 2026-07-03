@@ -7,7 +7,8 @@ import {
   CERVIX_STATES,
   TEMP_SITES,
   findCycleForDate,
-  fixedTempSite,
+  cycleSite,
+  fertilityForecast,
   formatDateDe,
 } from '../utils/nfp.js';
 
@@ -42,7 +43,7 @@ function emptyEntry(dateIso) {
     id: crypto.randomUUID(),
     date: dateIso,
     temperature: '',
-    tempSite: null,
+    tempSite: 'oral', // Messart – am Periodenbeginn festgelegt, Vorgabe oral
     tempExcluded: false,
     cervicalMucus: null,
     mucusExcluded: false,
@@ -51,10 +52,11 @@ function emptyEntry(dateIso) {
     ferning: '',
     notes: '',
     isPeriodStart: false,
-    // Zyklus-Auswertungs-Flags (nur auf dem Starteintrag relevant):
+    // Zyklus-Flags (nur auf dem Starteintrag relevant): welche Zeichen gelten.
     trackTemp: true,
     trackMucus: true,
-    trackCervix: false,
+    trackCervix: true,
+    trackFerning: true,
   };
 }
 
@@ -98,6 +100,24 @@ function LockedNote({ children }) {
   return <p className="locked-note">🔒 {children}</p>;
 }
 
+// "Für diesen Zyklus deaktivieren" – blendet das Zeichen aus Auswertung & Kalender aus.
+function ModuleDisable({ id, checked, onChange }) {
+  return (
+    <label className="module-disable" htmlFor={id}>
+      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      Für diesen Zyklus deaktivieren
+    </label>
+  );
+}
+
+function DisabledNote() {
+  return (
+    <p className="disabled-note">
+      Für diesen Zyklus deaktiviert – wird ignoriert und nicht im Kalender angezeigt.
+    </p>
+  );
+}
+
 export default function EntryForm({
   entries = [],
   cycles = [],
@@ -124,8 +144,11 @@ export default function EntryForm({
   const [saved, setSaved] = useState(false);
 
   // Beim Datumswechsel die Werte des gewählten Tages laden (oder leeres Formular).
+  // Ist noch kein Zyklus getrackt, wird der Periodenbeginn automatisch aktiviert.
   useEffect(() => {
-    const loaded = entryByDate.get(activeDate) ?? emptyEntry(activeDate);
+    const existing = entryByDate.get(activeDate);
+    const loaded = existing ?? emptyEntry(activeDate);
+    if (!existing && cycles.length === 0) loaded.isPeriodStart = true;
     setForm(loaded);
     setTempParts(splitTemp(loaded.temperature));
     setSaved(false);
@@ -134,12 +157,16 @@ export default function EntryForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDate]);
 
-  // Zyklus-Kontext des gewählten Datums für Feld-Steuerung & Messort-Fixierung.
+  // Zyklus-Kontext des gewählten Datums.
   const cycle = useMemo(() => findCycleForDate(cycles, activeDate), [cycles, activeDate]);
   const evaluation = cycle?.evaluation ?? null;
   const cycleDay = cycle
     ? Math.round((parseIso(activeDate) - parseIso(cycle.startDate)) / 86400000) + 1
     : null;
+  const forecast = useMemo(
+    () => (cycle ? fertilityForecast(cycle, cycles, activeDate) : null),
+    [cycle, cycles, activeDate]
+  );
 
   const tempLocked =
     evaluation?.temperature.status === 'completed' &&
@@ -151,20 +178,23 @@ export default function EntryForm({
     evaluation?.cervix.status === 'completed' &&
     activeDate > evaluation.cervix.completedDate;
 
-  const fixedSite = cycle ? fixedTempSite(cycle.entries, activeDate) : null;
-  const effectiveSite = form.tempSite ?? fixedSite;
-
-  // Zyklus-Auswertungs-Flags: liegen auf dem Starteintrag. Am Starttag selbst
-  // aus dem Formular lesen (noch nicht gespeicherte Änderung), sonst aus dem Eintrag.
+  // Zyklus-Flags & Messart liegen auf dem Starteintrag. Am Starttag aus dem
+  // Formular lesen (ungespeicherte Änderung), sonst aus dem gespeicherten Eintrag.
   const isStartDay = !!cycle && activeDate === cycle.startDate;
   const startEntry = cycle ? entryByDate.get(cycle.startDate) : null;
+  const src = isStartDay ? form : startEntry;
   const tracks = {
-    temp: isStartDay ? form.trackTemp ?? true : startEntry?.trackTemp ?? true,
-    mucus: isStartDay ? form.trackMucus ?? true : startEntry?.trackMucus ?? true,
-    cervix: isStartDay ? form.trackCervix ?? false : startEntry?.trackCervix ?? false,
+    temp: src?.trackTemp ?? true,
+    mucus: src?.trackMucus ?? true,
+    cervix: src?.trackCervix ?? true,
+    ferning: src?.trackFerning ?? true,
   };
+  const site = isStartDay ? form.tempSite ?? 'oral' : cycleSite(cycle);
+  const lastPeriodStart = cycles.length ? cycles[cycles.length - 1].startDate : null;
 
-  async function setTrack(field, value) {
+  // Schreibt ein Zyklus-weites Feld (Flags/Messart) auf den Starteintrag – oder
+  // ins Formular, wenn wir am Starttag stehen bzw. noch kein Zyklus existiert.
+  async function setCycleField(field, value) {
     if (isStartDay || !cycle || !startEntry) {
       update(field, value);
       return;
@@ -174,7 +204,7 @@ export default function EntryForm({
     onSaved?.(updated);
   }
 
-  // "Neuen Zyklus starten" aus dem Eisprung-Popup: Periodenbeginn vorbelegen.
+  // "Neuen Zyklus starten" aus dem Popup: Periodenbeginn vorbelegen.
   useEffect(() => {
     if (pendingPeriodStart) {
       setForm((f) => ({ ...f, isPeriodStart: true }));
@@ -210,20 +240,6 @@ export default function EntryForm({
     );
   }
 
-  function changeSite(site) {
-    if (
-      site &&
-      fixedSite &&
-      site !== fixedSite &&
-      !window.confirm(
-        `Der Messort ist für diesen Zyklus auf „${fixedSite}“ festgelegt und sollte innerhalb eines Zyklus nicht gewechselt werden. Trotzdem ändern?`
-      )
-    ) {
-      return;
-    }
-    update('tempSite', site);
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     const toSave = {
@@ -232,10 +248,7 @@ export default function EntryForm({
         form.temperature === '' || form.temperature == null
           ? null
           : Number(form.temperature),
-      tempSite:
-        form.temperature === '' || form.temperature == null
-          ? form.tempSite
-          : (form.tempSite ?? effectiveSite ?? null),
+      tempSite: form.tempSite ?? 'oral',
       cervicalMucus: form.cervicalMucus || null,
       cervixState: form.cervixState || null,
       ferning: form.ferning || null,
@@ -270,6 +283,36 @@ export default function EntryForm({
 
   return (
     <form className="card" onSubmit={handleSubmit}>
+      {/* ── Info-Box: Zyklusstatus & Prognose (nicht interaktiv) ── */}
+      <div className="cycle-info-box" role="status" aria-live="polite">
+        <div className="cib-title">Aktueller Zyklus</div>
+        {cycle && forecast ? (
+          <>
+            <div className="cib-row">
+              <span>Zyklusstart</span>
+              <strong>{formatDateDe(cycle.startDate)} · Tag {forecast.cycleDay}</strong>
+            </div>
+            <div className="cib-row">
+              <span>Messart</span>
+              <strong>{site}</strong>
+            </div>
+            <div className={`cib-fertility ${forecast.phase}`}>
+              <span className="cib-badge">{forecast.phaseLabel}</span>
+              <span className="cib-note">{forecast.phaseNote}</span>
+            </div>
+            <div className="cib-row cib-ovu">
+              <span>Eisprung</span>
+              <strong>{forecast.ovulation.text}</strong>
+            </div>
+          </>
+        ) : (
+          <div className="cib-empty">
+            Noch kein Zyklus erfasst – markiere unten den Periodenbeginn (Tag 1).
+          </div>
+        )}
+      </div>
+
+      {/* ── Datum ─────────────────────────────────────── */}
       <div className="field">
         <label htmlFor="date">Datum (← → Tag wechseln)</label>
         <div className="date-nav">
@@ -303,60 +346,14 @@ export default function EntryForm({
         )}
       </div>
 
-      <button
-        type="button"
-        className={`period-toggle${form.isPeriodStart ? ' active' : ''}`}
-        onClick={() => update('isPeriodStart', !form.isPeriodStart)}
-        aria-pressed={form.isPeriodStart}
-      >
-        <span className="period-toggle-icon" aria-hidden="true">🩸</span>
-        <span>
-          <strong>Periodenbeginn</strong>
-          <small>markiert den Zyklusstart (Tag 1)</small>
-        </span>
-        <span className="period-toggle-state">{form.isPeriodStart ? '✓' : ''}</span>
-      </button>
-
-      {/* ── Zyklus-Auswertung: was zählt mit? ──────────── */}
-      <div className="cycle-tracks">
-        <div className="cycle-tracks-title">Für diesen Zyklus auswerten</div>
-        <div className="track-checks">
-          <label className={`track-check${tracks.temp ? ' active' : ''}`}>
-            <input
-              type="checkbox"
-              checked={tracks.temp}
-              onChange={(e) => setTrack('trackTemp', e.target.checked)}
-            />
-            Temperatur
-          </label>
-          <label className={`track-check${tracks.mucus ? ' active' : ''}`}>
-            <input
-              type="checkbox"
-              checked={tracks.mucus}
-              onChange={(e) => setTrack('trackMucus', e.target.checked)}
-            />
-            Zervixschleim
-          </label>
-          <label className={`track-check${tracks.cervix ? ' active' : ''}`}>
-            <input
-              type="checkbox"
-              checked={tracks.cervix}
-              onChange={(e) => setTrack('trackCervix', e.target.checked)}
-            />
-            Muttermund
-          </label>
-        </div>
-        <p className="field-hint">
-          Mindestens <strong>Temperatur + (Zervixschleim oder Muttermund)</strong> nötig.
-          Gilt für den ganzen Zyklus.
-        </p>
-      </div>
-
       {/* ── Temperatur ─────────────────────────────────── */}
-      <fieldset className="module-block">
+      <fieldset className={`module-block${tracks.temp ? '' : ' is-off'}`}>
         <legend>Basaltemperatur</legend>
+        <ModuleDisable id="disTemp" checked={!tracks.temp} onChange={(v) => setCycleField('trackTemp', !v)} />
 
-        {tempLocked ? (
+        {!tracks.temp ? (
+          <DisabledNote />
+        ) : tempLocked ? (
           <LockedNote>
             Temperaturmessung für diesen Zyklus abgeschlossen – der Eisprung hat
             stattgefunden (Auswertung vom {formatDateDe(evaluation.temperature.completedDate)}).
@@ -392,21 +389,8 @@ export default function EntryForm({
                     changeTemp(tempInt, e.target.value.replace(/\D/g, '').slice(0, 2))
                   }
                 />
+                <span className="temp-site-hint">Messart: {site}</span>
               </div>
-            </div>
-
-            <div className="field">
-              <label>Messort (1× pro Zyklus festlegen, dann fix)</label>
-              <Segmented
-                options={TEMP_SITES.map((s) => ({ value: s, label: s }))}
-                value={effectiveSite}
-                onChange={changeSite}
-              />
-              {fixedSite && (
-                <p className="field-hint">
-                  Für diesen Zyklus festgelegt: {fixedSite} (rektal ist am genauesten).
-                </p>
-              )}
             </div>
 
             <div className="field checkbox-row">
@@ -426,10 +410,13 @@ export default function EntryForm({
       </fieldset>
 
       {/* ── Zervixschleim ──────────────────────────────── */}
-      <fieldset className="module-block">
+      <fieldset className={`module-block${tracks.mucus ? '' : ' is-off'}`}>
         <legend>Zervixschleim</legend>
+        <ModuleDisable id="disMucus" checked={!tracks.mucus} onChange={(v) => setCycleField('trackMucus', !v)} />
 
-        {mucusLocked ? (
+        {!tracks.mucus ? (
+          <DisabledNote />
+        ) : mucusLocked ? (
           <LockedNote>
             Schleim-Auswertung für diesen Zyklus abgeschlossen (Höhepunkt +3 Tage,
             beendet am {formatDateDe(evaluation.mucus.completedDate)}). Die Eingabe ist
@@ -477,10 +464,13 @@ export default function EntryForm({
       </fieldset>
 
       {/* ── Muttermund ─────────────────────────────────── */}
-      <fieldset className="module-block">
+      <fieldset className={`module-block${tracks.cervix ? '' : ' is-off'}`}>
         <legend>Muttermund</legend>
+        <ModuleDisable id="disCervix" checked={!tracks.cervix} onChange={(v) => setCycleField('trackCervix', !v)} />
 
-        {cervixLocked ? (
+        {!tracks.cervix ? (
+          <DisabledNote />
+        ) : cervixLocked ? (
           <LockedNote>
             Muttermund-Auswertung für diesen Zyklus abgeschlossen (Höhepunkt +3 Tage
             hart/geschlossen/tief, beendet am {formatDateDe(evaluation.cervix.completedDate)}).
@@ -531,20 +521,30 @@ export default function EntryForm({
         )}
       </fieldset>
 
-      <div className="field">
-        <label htmlFor="ferning">Spucke (Farnkraut-Test)</label>
-        <select
-          id="ferning"
-          value={form.ferning ?? ''}
-          onChange={(e) => update('ferning', e.target.value)}
-        >
-          <option value="">– keine Angabe –</option>
-          {FERNING_OPTIONS.map((o) => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-      </div>
+      {/* ── Spucke (Farnkraut-Test) ────────────────────── */}
+      <fieldset className={`module-block${tracks.ferning ? '' : ' is-off'}`}>
+        <legend>Spucke (Farnkraut-Test)</legend>
+        <ModuleDisable id="disFerning" checked={!tracks.ferning} onChange={(v) => setCycleField('trackFerning', !v)} />
 
+        {!tracks.ferning ? (
+          <DisabledNote />
+        ) : (
+          <div className="field">
+            <select
+              id="ferning"
+              value={form.ferning ?? ''}
+              onChange={(e) => update('ferning', e.target.value)}
+            >
+              <option value="">– keine Angabe –</option>
+              {FERNING_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </fieldset>
+
+      {/* ── Notizen ────────────────────────────────────── */}
       <div className="field">
         <label htmlFor="notes">Notizen</label>
         <textarea
@@ -552,6 +552,36 @@ export default function EntryForm({
           value={form.notes}
           onChange={(e) => update('notes', e.target.value)}
         />
+      </div>
+
+      {/* ── Periodenbeginn + Messart (ganz unten) ──────── */}
+      <div className="cycle-setup">
+        <button
+          type="button"
+          className={`period-toggle${form.isPeriodStart ? ' active' : ''}`}
+          onClick={() => update('isPeriodStart', !form.isPeriodStart)}
+          aria-pressed={form.isPeriodStart}
+        >
+          <span className="period-toggle-icon" aria-hidden="true">🩸</span>
+          <span>
+            <strong>Periodenbeginn</strong>
+            <small>markiert den Zyklusstart (Tag 1)</small>
+            {lastPeriodStart && (
+              <small>Letzter Periodenstart: {formatDateDe(lastPeriodStart)}</small>
+            )}
+          </span>
+          <span className="period-toggle-state">{form.isPeriodStart ? '✓' : ''}</span>
+        </button>
+
+        <div className="messart-row">
+          <label>Messart (zu Beginn der Periode festlegen – gilt für den ganzen Zyklus)</label>
+          <Segmented
+            options={TEMP_SITES.map((s) => ({ value: s, label: s }))}
+            value={site}
+            onChange={(v) => setCycleField('tempSite', v || 'oral')}
+          />
+          <p className="field-hint">Vorgabe: oral. Rektal ist am genauesten.</p>
+        </div>
       </div>
 
       <button type="submit" className="btn-primary">

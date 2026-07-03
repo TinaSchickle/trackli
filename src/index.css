@@ -762,6 +762,107 @@ textarea:focus-visible {
   align-items: center;
 }
 
+/* ── Info-Box: Zyklusstatus & Prognose ──────────────── */
+
+.cycle-info-box {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  background: var(--color-muschel-light);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.cib-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--color-ton-dark);
+  margin-bottom: 8px;
+}
+
+.cib-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  padding: 3px 0;
+}
+
+.cib-row > span { color: var(--color-text-soft); flex-shrink: 0; }
+.cib-row > strong { text-align: right; }
+.cib-ovu > strong { font-weight: 500; }
+
+.cib-fertility {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.cib-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cib-fertility.fertile .cib-badge { background: var(--color-period); }
+.cib-fertility.infertile .cib-badge { background: var(--color-rauchblau-dark); }
+
+.cib-note { font-size: 0.8rem; color: var(--color-text-soft); }
+.cib-empty { font-size: 0.85rem; color: var(--color-text-soft); }
+
+/* ── Modul „für diesen Zyklus deaktivieren" ─────────── */
+
+.module-disable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.module-disable input { width: 16px; height: 16px; accent-color: var(--color-rauchblau); }
+
+.module-block.is-off { opacity: 0.7; }
+
+.disabled-note {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
+/* ── Periodenbeginn + Messart (unten) ───────────────── */
+
+.cycle-setup {
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.period-toggle small { display: block; line-height: 1.35; }
+.period-toggle small:last-child { color: var(--color-text-soft); }
+
+.messart-row { margin-top: 12px; }
+.messart-row > label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+  margin-bottom: 6px;
+}
+
+.temp-site-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  margin-left: 8px;
+}
+
 /* ── Kalender: Auswertungs-Markierungen ─────────────── */
 
 .cycle-sheet td { position: relative; }

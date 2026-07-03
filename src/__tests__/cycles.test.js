@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { segmentIntoCycles } from '../utils/cycles.js';
-import { findCycleForDate, fixedTempSite, migrateEntry } from '../utils/nfp.js';
+import { findCycleForDate, fixedTempSite, cycleSite, fertilityForecast, migrateEntry } from '../utils/nfp.js';
 import { generateTestEntries, CYCLE_CONFIGS } from '../testData.js';
 
 describe('Testdaten – 10 vollständige Zyklen', () => {
@@ -78,5 +78,41 @@ describe('Zyklus-Hilfen', () => {
   it('fixedTempSite liefert den im Zyklus festgelegten Messort', () => {
     const c1 = cycles[0];
     expect(fixedTempSite(c1.entries)).toBe('rektal');
+  });
+
+  it('cycleSite liest die Messart vom Starteintrag (Vorgabe oral)', () => {
+    expect(cycleSite(cycles[0])).toBe('rektal');
+    expect(cycleSite(null)).toBe('oral');
+  });
+});
+
+describe('Fruchtbarkeits- & Eisprung-Prognose', () => {
+  const cycles = segmentIntoCycles(generateTestEntries());
+  const c1 = cycles[0];
+
+  it('ist bis Tag 5 unfruchtbar', () => {
+    const f = fertilityForecast(c1, cycles, c1.entries[2].date); // Tag 3
+    expect(f.cycleDay).toBe(3);
+    expect(f.phase).toBe('infertile');
+  });
+
+  it('ist in der fruchtbaren Phase (vor dem Eisprung) fruchtbar', () => {
+    const f = fertilityForecast(c1, cycles, c1.entries[8].date); // Tag 9
+    expect(f.phase).toBe('fertile');
+  });
+
+  it('ist nach dem bestätigten Eisprung wieder unfruchtbar', () => {
+    const last = c1.entries[c1.entries.length - 1].date;
+    const f = fertilityForecast(c1, cycles, last);
+    expect(f.phase).toBe('infertile');
+    expect(f.ovulation.kind).toBe('detected');
+  });
+
+  it('prognostiziert den Eisprung im laufenden Zyklus (kein Rückblick)', () => {
+    // Zyklus 6 (anovulatorisch) → keine Bestätigung, aber eine Vorhersage.
+    const c6 = cycles[5];
+    const f = fertilityForecast(c6, cycles, c6.entries[7].date);
+    expect(['predicted', 'imminent']).toContain(f.ovulation.kind);
+    expect(f.ovulation.date).toBeTruthy();
   });
 });

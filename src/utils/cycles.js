@@ -38,7 +38,8 @@ export function segmentIntoCycles(allEntries) {
     const tracks = {
       temp: first.trackTemp ?? true,
       mucus: first.trackMucus ?? true,
-      cervix: first.trackCervix ?? false,
+      cervix: first.trackCervix ?? true,
+      ferning: first.trackFerning ?? true,
     };
 
     cycles.push({

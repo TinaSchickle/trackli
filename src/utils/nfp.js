@@ -661,3 +661,110 @@ export function fixedTempSite(cycleEntries, exceptDate = null) {
   }
   return null;
 }
+
+/** Am Periodenbeginn festgelegter Messort des Zyklus (Vorgabe: oral). */
+export function cycleSite(cycle) {
+  return cycle?.entries?.[0]?.tempSite ?? 'oral';
+}
+
+// ── Fruchtbarkeits- & Eisprung-Prognose ──────────────────────────────────────
+
+function isoDiffDays(a, b) {
+  const [ya, ma, da] = a.split('-').map(Number);
+  const [yb, mb, db] = b.split('-').map(Number);
+  return Math.round((new Date(yb, mb - 1, db) - new Date(ya, ma - 1, da)) / 86400000);
+}
+
+function addIsoDays(iso, n) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function averageOvulationDay(allCycles) {
+  const days = (allCycles || [])
+    .filter((c) => !c.isCurrent && c.ovulation?.cycleDay)
+    .map((c) => c.ovulation.cycleDay);
+  if (!days.length) return null;
+  return Math.round(days.reduce((a, b) => a + b, 0) / days.length);
+}
+
+function averageCycleLength(allCycles) {
+  const lens = (allCycles || [])
+    .filter((c) => !c.isCurrent && typeof c.length === 'number')
+    .map((c) => c.length);
+  if (!lens.length) return null;
+  return Math.round(lens.reduce((a, b) => a + b, 0) / lens.length);
+}
+
+const FERNING_FULL = 'Vollständiges Farnkraut-Muster';
+
+// Eisprung-Prognose aus Temperatur, Schleim, Muttermund und Spucke.
+function predictOvulation(cycle, allCycles, dateIso) {
+  const ev = cycle.evaluation;
+  if (ev?.complete && cycle.ovulation?.date) {
+    return {
+      kind: 'detected',
+      date: cycle.ovulation.date,
+      day: cycle.ovulation.cycleDay,
+      text: `Eisprung bestätigt um den ${formatDateDe(cycle.ovulation.date)} (Zyklustag ${cycle.ovulation.cycleDay}, ${cycle.ovulation.method}).`,
+    };
+  }
+  // Unmittelbar bevorstehend anhand der aktuellen fruchtbarsten Zeichen.
+  const recent = cycle.entries.filter((e) => e.date <= dateIso).slice(-2);
+  const peakSign = recent.some(
+    (e) => e.cervicalMucus === 'S+' || e.cervixState === 'weich' || e.ferning === FERNING_FULL
+  );
+  if (peakSign) {
+    return {
+      kind: 'imminent',
+      date: dateIso,
+      text: 'Eisprung steht unmittelbar bevor – fruchtbarste Zeichen aktiv (Schleim S+, weicher Muttermund oder volles Farnkraut-Muster).',
+    };
+  }
+  // Prognose aus der Historie (Ø Eisprungtag bzw. Ø Zykluslänge − 14).
+  const avgOv = averageOvulationDay(allCycles);
+  const avgLen = averageCycleLength(allCycles);
+  const day = avgOv ?? (avgLen ? avgLen - 14 : 14);
+  const date = addIsoDays(cycle.startDate, day - 1);
+  const basis = avgOv ? 'Ø bisheriger Eisprungtage' : avgLen ? 'Ø Zykluslänge − 14' : 'Standardannahme Tag 14';
+  return {
+    kind: 'predicted',
+    date,
+    day,
+    text: `Eisprung erwartet um den ${formatDateDe(date)} (Zyklustag ${day}, ${basis}).`,
+  };
+}
+
+/**
+ * Fruchtbarkeits-Prognose für einen Tag: bis Tag 5 unfruchtbar, danach bis zum
+ * (bestätigten) Eisprung fruchtbar, danach wieder unfruchtbar. Plus Eisprung-
+ * Prognose aus allen Körperzeichen. Informativ – sowohl für Verhütung als auch
+ * für Kinderwunsch.
+ */
+export function fertilityForecast(cycle, allCycles, dateIso) {
+  if (!cycle) return null;
+  const cycleDay = isoDiffDays(cycle.startDate, dateIso) + 1;
+  const ev = cycle.evaluation;
+  const ovulation = predictOvulation(cycle, allCycles, dateIso);
+
+  let phase, phaseLabel, phaseNote;
+  if (ev?.complete && dateIso > ev.infertileFrom) {
+    phase = 'infertile';
+    phaseLabel = 'Unfruchtbar';
+    phaseNote = `Nach dem Eisprung (unfruchtbar seit dem Abend des ${formatDateDe(ev.infertileFrom)}).`;
+  } else if (cycleDay <= 5) {
+    phase = 'infertile';
+    phaseLabel = 'Unfruchtbar';
+    phaseNote = 'Frühe Zyklusphase (bis Tag 5) – nach Faustregel unfruchtbar.';
+  } else {
+    phase = 'fertile';
+    phaseLabel = 'Fruchtbar';
+    phaseNote = 'Fruchtbare Phase – bis der Eisprung durch doppelte Kontrolle bestätigt ist.';
+  }
+
+  return { cycleDay, phase, phaseLabel, phaseNote, ovulation };
+}

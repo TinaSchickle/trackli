@@ -1,5 +1,4 @@
 import { OvulationChart, CycleLengthChart } from './Charts.jsx';
-import CycleChart from './CycleChart.jsx';
 
 export default function Dashboard({ cycles }) {
   const completed = cycles.filter((c) => !c.isCurrent);
@@ -39,13 +38,6 @@ export default function Dashboard({ cycles }) {
               Noch keine ausreichende Datenlage für eine Ovulationsschätzung.
             </p>
           )}
-        </div>
-      )}
-
-      {currentCycle && (
-        <div className="card">
-          <h3 style={{ fontSize: '1rem' }}>Aktueller Zyklus – Chart</h3>
-          <CycleChart cycle={currentCycle} />
         </div>
       )}
 

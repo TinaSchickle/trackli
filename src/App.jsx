@@ -44,11 +44,11 @@ export default function App() {
     !!currentCycle?.evaluation?.complete &&
     ovDismissed !== currentCycle.id;
 
-  function startNewCycleFromModal() {
+  // "Zykluskalender abschließen": Popup schließen und den fertigen Zyklus im
+  // Kalender anzeigen. Ein neuer Zyklus entsteht erst beim nächsten Periodenbeginn.
+  function finishCycleFromModal() {
     setOvDismissed(currentCycle.id);
-    setSelectedDate(todayIso());
-    setPendingPeriodStart(true);
-    setTab('entry');
+    setTab('calendar');
   }
 
   async function handleEntrySaved(savedEntry) {
@@ -133,7 +133,7 @@ export default function App() {
           infertileFrom={formatDateDe(currentCycle.evaluation.infertileFrom)}
           method={currentCycle.evaluation.symptomMethod}
           onKeepLogging={() => setOvDismissed(currentCycle.id)}
-          onStartNewCycle={startNewCycleFromModal}
+          onFinish={finishCycleFromModal}
         />
       )}
 

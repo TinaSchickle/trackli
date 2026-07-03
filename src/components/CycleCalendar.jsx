@@ -217,11 +217,14 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
     );
   }
 
+  // Für diesen Zyklus deaktivierte Zeichen werden im Kalender ausgeblendet.
+  const tracks = cycle.tracks ?? { temp: true, mucus: true, cervix: true, ferning: true };
+
   const explanations = evaluation
     ? [
-        ...evaluation.temperature.messages,
-        ...evaluation.mucus.messages,
-        ...evaluation.cervix.messages,
+        ...(tracks.temp ? evaluation.temperature.messages : []),
+        ...(tracks.mucus ? evaluation.mucus.messages : []),
+        ...(tracks.cervix ? evaluation.cervix.messages : []),
         ...evaluation.messages,
       ]
     : [];
@@ -286,6 +289,7 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
                 </td>
               ))}
             </tr>
+            {tracks.mucus && (
             <tr>
               <th className="sheet-label">Zervixschleim</th>
               {days.map((d) => {
@@ -315,6 +319,8 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
                 );
               })}
             </tr>
+            )}
+            {tracks.cervix && (
             <tr>
               <th className="sheet-label">Muttermund</th>
               {days.map((d) => {
@@ -346,6 +352,8 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
                 );
               })}
             </tr>
+            )}
+            {tracks.ferning && (
             <tr>
               <th className="sheet-label">Spucke</th>
               {days.map((d) => (
@@ -356,7 +364,8 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
                 </td>
               ))}
             </tr>
-            {tempRows.map((v) => (
+            )}
+            {tracks.temp && tempRows.map((v) => (
               <tr key={v} className="sheet-temp-row">
                 <th className={`sheet-label sheet-temp-label${v % 10 === 0 ? ' is-major' : ''}`}>
                   {(v / 100).toFixed(2).replace('.', ',')}
@@ -397,7 +406,7 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
         </table>
       </div>
 
-      {marks.coverCents != null && (
+      {tracks.temp && marks.coverCents != null && (
         <div className="sheet-coverinfo">
           Hilfslinie: {formatCents(marks.coverCents)} °C · feine Linie: +0,2 °C (
           {formatCents(marks.coverCents + 20)} °C)
