@@ -33,6 +33,14 @@ export function segmentIntoCycles(allEntries) {
     );
     if (hasCervixData) priorCyclesWithCervix++;
 
+    // Auswertungs-Flags werden pro Zyklus auf dem Starteintrag gespeichert.
+    const first = cycleEntries[0];
+    const tracks = {
+      temp: first.trackTemp ?? true,
+      mucus: first.trackMucus ?? true,
+      cervix: first.trackCervix ?? false,
+    };
+
     cycles.push({
       id: cycleEntries[0].date,
       startDate: cycleEntries[0].date,
@@ -41,7 +49,13 @@ export function segmentIntoCycles(allEntries) {
       entries: cycleEntries,
       isCurrent,
       cervixLearning,
-      evaluation: evaluateCycle(cycleEntries, { cervixLearning }),
+      tracks,
+      evaluation: evaluateCycle(cycleEntries, {
+        cervixLearning,
+        trackTemp: tracks.temp,
+        trackMucus: tracks.mucus,
+        trackCervix: tracks.cervix,
+      }),
       ovulation: estimateOvulationDay(cycleEntries),
     });
   }

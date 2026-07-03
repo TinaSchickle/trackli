@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseIso, toIso, todayIso, addDays } from '../utils/dates.js';
 import {
   MUCUS,
   cervixKuerzel,
   cervixAgenda,
   cervixScore,
+  CERVIX_FERTILE_SCORE,
   formatCents,
 } from '../utils/nfp.js';
 
@@ -66,8 +67,13 @@ const TEMP_STEP = 5; // 0,05 °C pro Zeile
 const TEMP_MIN = 3600; // 36,0 °C
 const TEMP_BASE_MAX = 3700; // 37,0 °C – wird bei höheren Messwerten erweitert
 
-export default function CycleCalendar({ cycle, entries, onSelectDay }) {
+export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
   const scrollRef = useRef(null);
+  const [idx, setIdx] = useState(null);
+
+  // Standardmäßig den aktuellen (letzten) Zyklus zeigen; per Pfeilen blätterbar.
+  const activeIdx = idx == null ? cycles.length - 1 : Math.min(Math.max(idx, 0), cycles.length - 1);
+  const cycle = cycles[activeIdx] ?? null;
 
   const entryByDate = useMemo(() => {
     const map = new Map();
@@ -78,12 +84,17 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
   const today = todayIso();
   const evaluation = cycle?.evaluation ?? null;
 
-  // Tag 1 = Zyklusbeginn (Periodenbeginn), Tag 0 = Vortag, bis Tag 40.
+  // Tag 1 = Zyklusbeginn (Periodenbeginn), Tag 0 = Vortag. Abgeschlossene Zyklen
+  // enden bei ihrer echten Länge (kein Übergreifen in den Folgezyklus), der
+  // aktuelle Zyklus zeigt bis Tag 40.
   const days = useMemo(() => {
     if (!cycle) return [];
+    const maxDay = cycle.isCurrent
+      ? MAX_DAY
+      : Math.min(MAX_DAY, cycle.length ?? cycle.entries.length);
     const start = parseIso(cycle.startDate);
     const list = [];
-    for (let i = 0; i <= MAX_DAY; i++) {
+    for (let i = 0; i <= maxDay; i++) {
       const date = addDays(start, i - 1);
       const iso = toIso(date);
       list.push({ dayNum: i, iso, date, entry: entryByDate.get(iso) });
@@ -217,6 +228,32 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
 
   return (
     <div className="card sheet-card">
+      {cycles.length > 1 && (
+        <div className="cycle-nav">
+          <button
+            type="button"
+            className="btn-secondary date-nav-btn"
+            aria-label="Vorheriger Zyklus"
+            disabled={activeIdx === 0}
+            onClick={() => setIdx(activeIdx - 1)}
+          >
+            ‹
+          </button>
+          <span className="cycle-nav-label">
+            Zyklus {activeIdx + 1} / {cycles.length}
+            {cycle.isCurrent ? ' · aktuell' : ''}
+          </span>
+          <button
+            type="button"
+            className="btn-secondary date-nav-btn"
+            aria-label="Nächster Zyklus"
+            disabled={activeIdx === cycles.length - 1}
+            onClick={() => setIdx(activeIdx + 1)}
+          >
+            ›
+          </button>
+        </div>
+      )}
       <h3 style={{ fontSize: '1rem' }}>Zyklus ab {cycle.startDate.split('-').reverse().join('.')}</h3>
       <div className="sheet-scroll" ref={scrollRef} onClick={handleClick}>
         <table className="cycle-sheet">
@@ -286,7 +323,7 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                 const excluded = d.entry?.cervixExcluded;
                 const cls = [
                   excluded ? 'is-notcounted' : '',
-                  !excluded && score === 6 ? 'is-fertile' : '',
+                  !excluded && score === CERVIX_FERTILE_SCORE ? 'is-fertile' : '',
                   mark?.peak ? 'is-peak' : '',
                 ]
                   .filter(Boolean)
@@ -381,8 +418,8 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
           S+ spinnbar / glasig · H Höhepunkt · ¹²³ Tage danach
         </div>
         <div>
-          Muttermund: h hart · m mittel · w weich | · geschlossen · o leicht offen ·
-          O offen | ↓ tief · → mittel · ↑ hoch (grün = weich/offen/hoch)
+          Muttermund: ● fest / zu · ◐ Übergang · ◯ weich / offen (grün = fruchtbar) ·
+          H Höhepunkt · ¹²³ Tage danach
         </div>
         <div>
           Temperatur: ¹⁻⁶ tiefe Werte (Basis der Hilfslinie) · ¹⁻³ höhere Werte ·

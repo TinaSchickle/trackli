@@ -44,9 +44,14 @@ export default function StatusTab({ cycle }) {
     );
   }
 
-  const { temperature: t, mucus, cervix, cervixLearning } = cycle.evaluation;
+  const { temperature: t, mucus, cervix, cervixLearning, tracks } = cycle.evaluation;
   const ev = cycle.evaluation;
   const cycleDay = cycle.entries.length;
+  const trackLabels = [
+    tracks.temp && 'Temperatur',
+    tracks.mucus && 'Zervixschleim',
+    tracks.cervix && 'Muttermund',
+  ].filter(Boolean);
 
   return (
     <div>
@@ -67,9 +72,12 @@ export default function StatusTab({ cycle }) {
           </p>
         )}
         {ev.messages.length > 0 && <Messages messages={ev.messages} />}
+        <p className="field-hint">
+          Ausgewertet werden: <strong>{trackLabels.join(' + ') || '– nichts aktiviert –'}</strong>
+        </p>
       </div>
 
-      <ModuleCard title="Basaltemperatur" status={t.status}>
+      <ModuleCard title={`Basaltemperatur${tracks.temp ? '' : ' (nicht aktiviert)'}`} status={t.status}>
         {t.coverCents != null && (
           <p className="status-keyfacts">
             Hilfslinie: <strong>{formatCents(t.coverCents)} °C</strong> · höhere
@@ -81,7 +89,7 @@ export default function StatusTab({ cycle }) {
         <Messages messages={t.messages} />
       </ModuleCard>
 
-      <ModuleCard title="Zervixschleim" status={mucus.status}>
+      <ModuleCard title={`Zervixschleim${tracks.mucus ? '' : ' (nicht aktiviert)'}`} status={mucus.status}>
         {mucus.peakDate && (
           <p className="status-keyfacts">
             Höhepunkt-Kandidat: <strong>{formatDateDe(mucus.peakDate)}</strong> ·
@@ -91,7 +99,7 @@ export default function StatusTab({ cycle }) {
         <Messages messages={mucus.messages} />
       </ModuleCard>
 
-      <ModuleCard title="Muttermund" status={cervix.status}>
+      <ModuleCard title={`Muttermund${tracks.cervix ? '' : ' (nicht aktiviert)'}`} status={cervix.status}>
         {cervixLearning && (
           <p className="field-hint learning-hint">
             Lernphase (Zyklus 1–3): Auswertung dient nur dem Kennenlernen und wird

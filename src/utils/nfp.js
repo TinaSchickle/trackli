@@ -46,49 +46,31 @@ export const MUCUS = {
 
 // ── Muttermund ───────────────────────────────────────────────────────────────
 
-export const CERVIX_FIRMNESS = {
-  hart: { label: 'hart', kuerzel: 'h', score: 0 },
-  mittel: { label: 'mittel', kuerzel: 'm', score: 1 },
-  weich: { label: 'weich', kuerzel: 'w', score: 2 },
+// Muttermund als EIN kombinierter Zustand (statt drei Einzelwerten). Die drei
+// Eigenschaften (Konsistenz/Öffnung/Position) bewegen sich gleichsinnig, daher
+// genügt zur Auswertung die zusammengefasste 3-Stufen-Skala (Sektion 2).
+export const CERVIX_STATES = {
+  fest: { label: 'fest / zu', kuerzel: '●', agenda: 'fest / zu', score: 0 },
+  uebergang: { label: 'Übergang', kuerzel: '◐', agenda: 'Übergang', score: 1 },
+  weich: { label: 'weich / offen', kuerzel: '◯', agenda: 'weich / offen', score: 2 },
 };
 
-export const CERVIX_OPENING = {
-  geschlossen: { label: 'geschlossen', kuerzel: '·', score: 0 },
-  leicht: { label: 'leicht offen', kuerzel: 'o', score: 1 },
-  offen: { label: 'offen', kuerzel: 'O', score: 2 },
-};
+// Fruchtbarster Zustand (weich/offen/hoch) = höchster Score.
+export const CERVIX_FERTILE_SCORE = 2;
 
-export const CERVIX_POSITION = {
-  tief: { label: 'tief', kuerzel: '↓', score: 0 },
-  mittel: { label: 'mittel', kuerzel: '→', score: 1 },
-  hoch: { label: 'hoch', kuerzel: '↑', score: 2 },
-};
-
-/** Gesamt-Score 0–6 (0 = hart·geschlossen·tief, 6 = weich·offen·hoch). */
 export function cervixScore(entry) {
-  const f = CERVIX_FIRMNESS[entry.cervixFirmness];
-  const o = CERVIX_OPENING[entry.cervixOpening];
-  const p = CERVIX_POSITION[entry.cervixPosition];
-  if (!f || !o || !p) return null;
-  return f.score + o.score + p.score;
+  const s = CERVIX_STATES[entry.cervixState];
+  return s ? s.score : null;
 }
 
 export function cervixKuerzel(entry) {
-  const f = CERVIX_FIRMNESS[entry.cervixFirmness];
-  const o = CERVIX_OPENING[entry.cervixOpening];
-  const p = CERVIX_POSITION[entry.cervixPosition];
-  if (!f && !o && !p) return '';
-  return [f?.kuerzel ?? '', o?.kuerzel ?? '', p?.kuerzel ?? ''].join(' ').trim();
+  return CERVIX_STATES[entry.cervixState]?.kuerzel ?? '';
 }
 
 /** Agenda-Text laut Sektion 2 (fest/zu · Übergang · weich/offen). */
 export function cervixAgenda(entry) {
   if (entry.cervixExcluded) return '–';
-  const s = cervixScore(entry);
-  if (s == null) return '';
-  if (s === 0) return 'fest / zu';
-  if (s === 6) return 'weich / offen';
-  return 'Übergang';
+  return CERVIX_STATES[entry.cervixState]?.agenda ?? '';
 }
 
 // ── Temperatur ───────────────────────────────────────────────────────────────
@@ -120,15 +102,32 @@ const OLD_MUCUS = {
   'Wässrig': 'S',
 };
 
-const OLD_CERVIX = {
-  'Geschlossen/fest': { firm: 'hart', open: 'geschlossen', pos: 'tief' },
-  'Leicht geöffnet/mittel': { firm: 'mittel', open: 'leicht', pos: 'mittel' },
-  'Offen/weich': { firm: 'weich', open: 'offen', pos: 'hoch' },
+// Sehr alte Kodierung: Muttermund als einzelner String.
+const OLD_CERVIX_STRING = {
+  'Geschlossen/fest': 'fest',
+  'Leicht geöffnet/mittel': 'uebergang',
+  'Offen/weich': 'weich',
 };
+
+// Vorherige Version: drei Einzelwerte. Summe 0–6 → 3-Stufen-Zustand.
+const OLD_FIRM = { hart: 0, mittel: 1, weich: 2 };
+const OLD_OPEN = { geschlossen: 0, leicht: 1, offen: 2 };
+const OLD_POS = { tief: 0, mittel: 1, hoch: 2 };
+
+function oldTripletToState(n) {
+  const f = OLD_FIRM[n.cervixFirmness];
+  const o = OLD_OPEN[n.cervixOpening];
+  const p = OLD_POS[n.cervixPosition];
+  if (f == null || o == null || p == null) return null;
+  const sum = f + o + p;
+  if (sum <= 1) return 'fest';
+  if (sum >= 5) return 'weich';
+  return 'uebergang';
+}
 
 /**
  * Hebt einen Eintrag auf das aktuelle Datenmodell (neue Schleim-Skala,
- * Muttermund als 3 Eigenschaften, Modul-Flags). Idempotent.
+ * Muttermund als kombinierter Zustand, Modul-Flags). Idempotent.
  */
 export function migrateEntry(e) {
   let changed = false;
@@ -139,13 +138,17 @@ export function migrateEntry(e) {
     changed = true;
   }
   if ('cervix' in n) {
-    const mapped = typeof n.cervix === 'string' ? OLD_CERVIX[n.cervix] : null;
-    if (mapped) {
-      n.cervixFirmness = mapped.firm;
-      n.cervixOpening = mapped.open;
-      n.cervixPosition = mapped.pos;
-    }
+    const s = typeof n.cervix === 'string' ? OLD_CERVIX_STRING[n.cervix] : null;
+    if (s && !n.cervixState) n.cervixState = s;
     delete n.cervix;
+    changed = true;
+  }
+  if ('cervixFirmness' in n || 'cervixOpening' in n || 'cervixPosition' in n) {
+    const s = oldTripletToState(n);
+    if (s && !n.cervixState) n.cervixState = s;
+    delete n.cervixFirmness;
+    delete n.cervixOpening;
+    delete n.cervixPosition;
     changed = true;
   }
   // Frühere getrennte Skip-/Störungs-Flags zu je einem "ausklammern"-Flag
@@ -174,7 +177,7 @@ export function migrateEntry(e) {
       changed = true;
     }
   }
-  const nullDefaults = ['tempSite', 'cervixFirmness', 'cervixOpening', 'cervixPosition'];
+  const nullDefaults = ['tempSite', 'cervixState'];
   for (const k of nullDefaults) {
     if (!(k in n)) {
       n[k] = null;
@@ -547,8 +550,12 @@ const NO_RISE_HINT_DAY = 26;
  * Muttermund ersetzt nur den Schleim, nie die Temperatur. Liegen Schleim UND
  * Muttermund vor, gilt der konservativere (spätere) Zeitpunkt.
  *
+ * Welche Zeichen mitgezählt werden, steuern die Zyklus-Flags trackTemp/
+ * trackMucus/trackCervix. Mindestanforderung: Temperatur + (Schleim ODER
+ * Muttermund). Muttermund ersetzt nur den Schleim, nie die Temperatur.
+ *
  * @param {Array} entries Einträge EINES Zyklus (chronologisch)
- * @param {{cervixLearning?: boolean}} opts
+ * @param {{cervixLearning?: boolean, trackTemp?: boolean, trackMucus?: boolean, trackCervix?: boolean}} opts
  */
 export function evaluateCycle(entries, opts = {}) {
   const temperature = evaluateTemperature(entries);
@@ -556,31 +563,31 @@ export function evaluateCycle(entries, opts = {}) {
   const cervix = evaluateCervix(entries);
   const cervixLearning = !!opts.cervixLearning;
 
-  const mucusObserved = mucus.status !== 'no_data';
-  const cervixObserved = cervix.status !== 'no_data';
-  const cervixUsable = cervixObserved && !cervixLearning;
+  const trackTemp = opts.trackTemp ?? true;
+  const trackMucus = opts.trackMucus ?? true;
+  const trackCervix = opts.trackCervix ?? false;
 
-  // Symptom-Seite der doppelten Kontrolle (konservativ):
+  const useMucus = trackMucus && mucus.status !== 'no_data';
+  const cervixUsable = trackCervix && cervix.status !== 'no_data' && !cervixLearning;
+
+  const mucusDone = useMucus && mucus.status === 'completed';
+  const cervixDone = cervixUsable && cervix.status === 'completed';
+
+  // Symptom-Seite der doppelten Kontrolle (konservativ = späterer Wert):
   let symptomDate = null;
   let symptomMethod = null;
-  if (mucusObserved && cervixUsable) {
-    if (mucus.status === 'completed' && cervix.status === 'completed') {
-      symptomDate = mucus.completedDate >= cervix.completedDate ? mucus.completedDate : cervix.completedDate;
-      symptomMethod = 'Schleim + Muttermund (konservativerer Wert)';
-    }
-  } else if (mucusObserved) {
-    if (mucus.status === 'completed') {
-      symptomDate = mucus.completedDate;
-      symptomMethod = 'Zervixschleim';
-    }
-  } else if (cervixUsable) {
-    if (cervix.status === 'completed') {
-      symptomDate = cervix.completedDate;
-      symptomMethod = 'Muttermund (Ersatzzeichen)';
-    }
+  if (mucusDone && cervixDone) {
+    symptomDate = mucus.completedDate >= cervix.completedDate ? mucus.completedDate : cervix.completedDate;
+    symptomMethod = 'Schleim + Muttermund (konservativerer Wert)';
+  } else if (mucusDone) {
+    symptomDate = mucus.completedDate;
+    symptomMethod = 'Zervixschleim';
+  } else if (cervixDone) {
+    symptomDate = cervix.completedDate;
+    symptomMethod = 'Muttermund (Ersatzzeichen)';
   }
 
-  const tempDone = temperature.status === 'completed';
+  const tempDone = trackTemp && temperature.status === 'completed';
   const complete = tempDone && symptomDate != null;
   const infertileFrom = complete
     ? (temperature.completedDate >= symptomDate ? temperature.completedDate : symptomDate)
@@ -592,23 +599,28 @@ export function evaluateCycle(entries, opts = {}) {
       `Doppelte Kontrolle erfüllt (Temperatur + ${symptomMethod}): Die unfruchtbare Zyklusphase beginnt am Abend des ${formatDateDe(infertileFrom)}.`
     );
   } else if (tempDone && !symptomDate) {
-    messages.push(
-      'Temperaturauswertung abgeschlossen – die doppelte Kontrolle wartet noch auf die Schleim- bzw. Muttermund-Auswertung.'
-    );
+    const wartetAuf =
+      trackMucus && trackCervix ? 'Schleim- bzw. Muttermund-Auswertung'
+        : trackMucus ? 'Schleim-Auswertung'
+          : trackCervix ? 'Muttermund-Auswertung' : 'Schleim-/Muttermund-Auswertung';
+    messages.push(`Temperaturauswertung abgeschlossen – die doppelte Kontrolle wartet noch auf die ${wartetAuf}.`);
   } else if (!tempDone && symptomDate) {
     messages.push(
       'Schleim-/Muttermund-Auswertung abgeschlossen – die doppelte Kontrolle wartet noch auf die Temperaturauswertung.'
     );
   }
-  if (
-    temperature.status === 'searching' &&
-    entries.length >= NO_RISE_HINT_DAY
-  ) {
+  if (!trackTemp) {
+    messages.push('Hinweis: Temperatur ist für diesen Zyklus nicht zur Auswertung aktiviert – ohne Temperatur ist keine sichere doppelte Kontrolle möglich.');
+  }
+  if (trackTemp && !trackMucus && !trackCervix) {
+    messages.push('Hinweis: Es ist kein zweites Körperzeichen (Schleim oder Muttermund) zur Auswertung aktiviert – für die doppelte Kontrolle ist mindestens eines nötig.');
+  }
+  if (trackTemp && temperature.status === 'searching' && entries.length >= NO_RISE_HINT_DAY) {
     messages.push(
       `Bisher kein Temperaturanstieg erkennbar (Zyklustag ${entries.length}) – vermutlich hat (noch) kein Eisprung stattgefunden.`
     );
   }
-  if (cervixObserved && cervixLearning) {
+  if (trackCervix && cervix.status !== 'no_data' && cervixLearning) {
     messages.push(
       'Lernphase Muttermund: In den ersten 2–3 Zyklen sollte die Muttermund-Auswertung noch nicht zur Verhütung herangezogen werden.'
     );
@@ -619,6 +631,7 @@ export function evaluateCycle(entries, opts = {}) {
     mucus,
     cervix,
     cervixLearning,
+    tracks: { temp: trackTemp, mucus: trackMucus, cervix: trackCervix },
     symptomDate,
     symptomMethod,
     complete,

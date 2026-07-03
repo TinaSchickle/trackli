@@ -13,7 +13,9 @@ import EvaluationTab from './components/EvaluationTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
 import AppRulesTab from './components/AppRulesTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
+import OvulationModal from './components/OvulationModal.jsx';
 import Nav from './components/Nav.jsx';
+import { formatDateDe } from './utils/nfp.js';
 
 export default function App() {
   const [entries, setEntries] = useState([]);
@@ -21,6 +23,8 @@ export default function App() {
   const [tab, setTab] = useState('entry');
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [showBackup, setShowBackup] = useState(false);
+  const [ovDismissed, setOvDismissed] = useState(null);
+  const [pendingPeriodStart, setPendingPeriodStart] = useState(false);
   const hiddenChartRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +36,20 @@ export default function App() {
 
   const cycles = useMemo(() => segmentIntoCycles(entries), [entries]);
   const currentCycle = cycles.find((c) => c.isCurrent);
+
+  // Eisprung-Popup: sobald die doppelte Kontrolle des aktuellen Zyklus erfüllt
+  // ist und der Nutzer im Eintrag-Tab ist (einmalig pro Zyklus, bis verworfen).
+  const showOvModal =
+    tab === 'entry' &&
+    !!currentCycle?.evaluation?.complete &&
+    ovDismissed !== currentCycle.id;
+
+  function startNewCycleFromModal() {
+    setOvDismissed(currentCycle.id);
+    setSelectedDate(todayIso());
+    setPendingPeriodStart(true);
+    setTab('entry');
+  }
 
   async function handleEntrySaved(savedEntry) {
     const isNewPeriodStart =
@@ -84,11 +102,13 @@ export default function App() {
             date={selectedDate}
             onDateChange={setSelectedDate}
             onSaved={handleEntrySaved}
+            pendingPeriodStart={pendingPeriodStart}
+            onPendingConsumed={() => setPendingPeriodStart(false)}
           />
         )}
         {tab === 'calendar' && (
           <CycleCalendar
-            cycle={currentCycle}
+            cycles={cycles}
             entries={entries}
             onSelectDay={(iso) => {
               setSelectedDate(iso);
@@ -107,6 +127,15 @@ export default function App() {
       <Nav active={tab} onChange={setTab} />
 
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
+
+      {showOvModal && (
+        <OvulationModal
+          infertileFrom={formatDateDe(currentCycle.evaluation.infertileFrom)}
+          method={currentCycle.evaluation.symptomMethod}
+          onKeepLogging={() => setOvDismissed(currentCycle.id)}
+          onStartNewCycle={startNewCycleFromModal}
+        />
+      )}
 
       {/* Verstecktes Chart für den aktuellen (bzw. gerade endenden) Zyklus,
           dient ausschließlich als Quelle für die SVG-Archivierung. */}

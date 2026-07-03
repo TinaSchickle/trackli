@@ -4,9 +4,7 @@ import { shiftIso, todayIso, parseIso } from '../utils/dates.js';
 import {
   MUCUS,
   MUCUS_CODES,
-  CERVIX_FIRMNESS,
-  CERVIX_OPENING,
-  CERVIX_POSITION,
+  CERVIX_STATES,
   TEMP_SITES,
   findCycleForDate,
   fixedTempSite,
@@ -48,13 +46,15 @@ function emptyEntry(dateIso) {
     tempExcluded: false,
     cervicalMucus: null,
     mucusExcluded: false,
-    cervixFirmness: null,
-    cervixOpening: null,
-    cervixPosition: null,
+    cervixState: null,
     cervixExcluded: false,
     ferning: '',
     notes: '',
     isPeriodStart: false,
+    // Zyklus-Auswertungs-Flags (nur auf dem Starteintrag relevant):
+    trackTemp: true,
+    trackMucus: true,
+    trackCervix: false,
   };
 }
 
@@ -98,7 +98,15 @@ function LockedNote({ children }) {
   return <p className="locked-note">🔒 {children}</p>;
 }
 
-export default function EntryForm({ entries = [], cycles = [], date, onDateChange, onSaved }) {
+export default function EntryForm({
+  entries = [],
+  cycles = [],
+  date,
+  onDateChange,
+  onSaved,
+  pendingPeriodStart = false,
+  onPendingConsumed,
+}) {
   const activeDate = date ?? todayIso();
 
   const entryByDate = useMemo(() => {
@@ -145,6 +153,36 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
 
   const fixedSite = cycle ? fixedTempSite(cycle.entries, activeDate) : null;
   const effectiveSite = form.tempSite ?? fixedSite;
+
+  // Zyklus-Auswertungs-Flags: liegen auf dem Starteintrag. Am Starttag selbst
+  // aus dem Formular lesen (noch nicht gespeicherte Änderung), sonst aus dem Eintrag.
+  const isStartDay = !!cycle && activeDate === cycle.startDate;
+  const startEntry = cycle ? entryByDate.get(cycle.startDate) : null;
+  const tracks = {
+    temp: isStartDay ? form.trackTemp ?? true : startEntry?.trackTemp ?? true,
+    mucus: isStartDay ? form.trackMucus ?? true : startEntry?.trackMucus ?? true,
+    cervix: isStartDay ? form.trackCervix ?? false : startEntry?.trackCervix ?? false,
+  };
+
+  async function setTrack(field, value) {
+    if (isStartDay || !cycle || !startEntry) {
+      update(field, value);
+      return;
+    }
+    const updated = { ...startEntry, [field]: value };
+    await putEntry(updated);
+    onSaved?.(updated);
+  }
+
+  // "Neuen Zyklus starten" aus dem Eisprung-Popup: Periodenbeginn vorbelegen.
+  useEffect(() => {
+    if (pendingPeriodStart) {
+      setForm((f) => ({ ...f, isPeriodStart: true }));
+      setSaved(false);
+      onPendingConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPeriodStart]);
 
   function setDate(iso) {
     if (onDateChange) onDateChange(iso);
@@ -199,11 +237,30 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
           ? form.tempSite
           : (form.tempSite ?? effectiveSite ?? null),
       cervicalMucus: form.cervicalMucus || null,
-      cervixFirmness: form.cervixFirmness || null,
-      cervixOpening: form.cervixOpening || null,
-      cervixPosition: form.cervixPosition || null,
+      cervixState: form.cervixState || null,
       ferning: form.ferning || null,
     };
+
+    // Neuer Zyklus, während der aktuelle noch nicht abgeschlossen ist:
+    // Sicherheitsabfrage – außer es liegen bereits ≥ 20 Tage seit Zyklusstart.
+    if (toSave.isPeriodStart) {
+      const prevCycle = cycles.find((c) => c.isCurrent);
+      const wasAlreadyStart = entryByDate.get(toSave.date)?.isPeriodStart;
+      const startsNewCycle = prevCycle && toSave.date > prevCycle.startDate;
+      if (startsNewCycle && !wasAlreadyStart && !prevCycle.evaluation.complete) {
+        const days = Math.round(
+          (parseIso(toSave.date) - parseIso(prevCycle.startDate)) / 86400000
+        );
+        if (days < 20) {
+          const ok = window.confirm(
+            'Willst du wirklich einen neuen Zyklus starten? Dein aktueller Zyklus ' +
+              'wird unterbrochen und abgespeichert.'
+          );
+          if (!ok) return;
+        }
+      }
+    }
+
     await putEntry(toSave);
     setSaved(true);
     onSaved?.(toSave);
@@ -259,6 +316,41 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
         </span>
         <span className="period-toggle-state">{form.isPeriodStart ? '✓' : ''}</span>
       </button>
+
+      {/* ── Zyklus-Auswertung: was zählt mit? ──────────── */}
+      <div className="cycle-tracks">
+        <div className="cycle-tracks-title">Für diesen Zyklus auswerten</div>
+        <div className="track-checks">
+          <label className={`track-check${tracks.temp ? ' active' : ''}`}>
+            <input
+              type="checkbox"
+              checked={tracks.temp}
+              onChange={(e) => setTrack('trackTemp', e.target.checked)}
+            />
+            Temperatur
+          </label>
+          <label className={`track-check${tracks.mucus ? ' active' : ''}`}>
+            <input
+              type="checkbox"
+              checked={tracks.mucus}
+              onChange={(e) => setTrack('trackMucus', e.target.checked)}
+            />
+            Zervixschleim
+          </label>
+          <label className={`track-check${tracks.cervix ? ' active' : ''}`}>
+            <input
+              type="checkbox"
+              checked={tracks.cervix}
+              onChange={(e) => setTrack('trackCervix', e.target.checked)}
+            />
+            Muttermund
+          </label>
+        </div>
+        <p className="field-hint">
+          Mindestens <strong>Temperatur + (Zervixschleim oder Muttermund)</strong> nötig.
+          Gilt für den ganzen Zyklus.
+        </p>
+      </div>
 
       {/* ── Temperatur ─────────────────────────────────── */}
       <fieldset className="module-block">
@@ -406,42 +498,20 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
             )}
 
             <div className="field">
-              <label>Konsistenz (hart = Nasenspitze · weich = Ohrläppchen/Unterlippe)</label>
+              <label>Zustand (Konsistenz · Öffnung · Position zusammengefasst)</label>
               <Segmented
-                options={Object.entries(CERVIX_FIRMNESS).map(([v, o]) => ({
+                options={Object.entries(CERVIX_STATES).map(([v, o]) => ({
                   value: v,
-                  label: o.label,
+                  label: `${o.kuerzel} ${o.label}`,
+                  title: o.label,
                 }))}
-                value={form.cervixFirmness}
-                onChange={(v) => update('cervixFirmness', v)}
-              />
-            </div>
-
-            <div className="field">
-              <label>Muttermundöffnung (äußeres Grübchen)</label>
-              <Segmented
-                options={Object.entries(CERVIX_OPENING).map(([v, o]) => ({
-                  value: v,
-                  label: o.label,
-                }))}
-                value={form.cervixOpening}
-                onChange={(v) => update('cervixOpening', v)}
-              />
-            </div>
-
-            <div className="field">
-              <label>Position / Höhe (tief = nah am Scheidenausgang)</label>
-              <Segmented
-                options={Object.entries(CERVIX_POSITION).map(([v, o]) => ({
-                  value: v,
-                  label: o.label,
-                }))}
-                value={form.cervixPosition}
-                onChange={(v) => update('cervixPosition', v)}
+                value={form.cervixState}
+                onChange={(v) => update('cervixState', v)}
               />
               <p className="field-hint">
-                Je weicher, offener und höher, desto fruchtbarer – je härter,
-                geschlossener und tiefer, desto unfruchtbarer.
+                <strong>fest / zu</strong> = hart, geschlossen, tief (wie Nasenspitze) ·
+                <strong> weich / offen</strong> = weich, offen, hoch (wie Ohrläppchen). Je
+                weicher/offener/höher, desto fruchtbarer.
               </p>
             </div>
 

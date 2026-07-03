@@ -362,6 +362,25 @@ textarea:focus-visible {
   padding: 14px 12px 12px;
 }
 
+.cycle-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cycle-nav-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ton-dark);
+}
+
+.cycle-nav .date-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .sheet-scroll {
   overflow-x: auto;
   cursor: pointer;
@@ -666,6 +685,83 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
+/* ── Zyklus-Auswertung: was zählt mit ───────────────── */
+
+.cycle-tracks {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: var(--color-muschel-light);
+}
+
+.cycle-tracks-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--color-ton-dark);
+  margin-bottom: 8px;
+}
+
+.track-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.track-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.track-check.active {
+  border-color: var(--color-ton);
+  background: color-mix(in srgb, var(--color-ton) 12%, var(--color-surface));
+  font-weight: 600;
+}
+
+.track-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-ton);
+}
+
+/* ── Eisprung-Popup ─────────────────────────────────── */
+
+.ov-modal {
+  text-align: center;
+  border-radius: 20px;
+  margin-bottom: 12vh;
+  width: min(420px, 92vw);
+  animation: ov-pop 0.2s ease;
+}
+
+@keyframes ov-pop {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.ov-modal-icon { font-size: 2.4rem; }
+
+.ov-modal p { font-size: 0.95rem; line-height: 1.5; }
+
+.ov-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ov-backdrop {
+  align-items: center;
+}
+
 /* ── Kalender: Auswertungs-Markierungen ─────────────── */
 
 .cycle-sheet td { position: relative; }
@@ -713,8 +809,7 @@ textarea:focus-visible {
 }
 
 .cycle-sheet td.cervix-cell {
-  font-size: 0.5rem;
-  letter-spacing: -0.4px;
+  font-size: 0.75rem;
 }
 
 .sheet-temp-row td.is-coverline {
