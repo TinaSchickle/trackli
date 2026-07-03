@@ -138,14 +138,14 @@ export default function StatusTab({ cycle }) {
 
       {signs.length > 0 && activeSign && (
         <>
-          <div className="status-switch" role="tablist">
+          <div className="seg-switch" role="tablist">
             {signs.map((s) => (
               <button
                 key={s.key}
                 type="button"
                 role="tab"
                 aria-selected={effectiveActive === s.key}
-                className={`status-switch-btn${effectiveActive === s.key ? ' active' : ''}`}
+                className={`seg-switch-btn${effectiveActive === s.key ? ' active' : ''}`}
                 onClick={() => setActive(s.key)}
               >
                 <StatusDot status={s.status} />

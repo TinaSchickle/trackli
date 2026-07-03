@@ -2,11 +2,10 @@ const TABS = [
   { key: 'entry', label: 'Eintrag', icon: '✏️' },
   { key: 'calendar', label: 'Kalender', icon: '📅' },
   { key: 'status', label: 'Status', icon: '🔎' },
-  { key: 'evaluation', label: 'Auswertung', icon: '📖' },
-  { key: 'rules', label: 'Regeln', icon: '📋' },
+  { key: 'evaluation', label: 'Regeln', icon: '📖' },
+  { key: 'rules', label: 'How To', icon: '📋' },
   { key: 'appRules', label: 'App', icon: '⚙️' },
   { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { key: 'archive', label: 'Verlauf', icon: '🗂️' },
 ];
 
 export default function Nav({ active, onChange }) {

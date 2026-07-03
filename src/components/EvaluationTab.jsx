@@ -1,6 +1,9 @@
 // Auswertung erklärt (Sektion 5 der drei NFP-Module) mit Beispielbildern,
 // gerendert wie die echte Kurve, als wären Daten eingetragen.
 
+import { useState } from 'react';
+import SignSwitch, { SIGN_OPTIONS } from './SignSwitch.jsx';
+
 // ── Beispiel-Temperaturkurve als SVG ─────────────────────────────────────────
 
 /**
@@ -117,8 +120,13 @@ function MiniSymbolRow({ items, caption }) {
 const LOW6 = [36.5, 36.55, 36.5, 36.45, 36.55, 36.5];
 
 export default function EvaluationTab() {
+  const [active, setActive] = useState('temp');
   return (
     <div className="text-tab">
+      <SignSwitch options={SIGN_OPTIONS} value={active} onChange={setActive} />
+
+      {active === 'temp' && (
+        <>
       <div className="card">
         <h3>Temperatur: Grundregel „3 über 6“</h3>
         <p>
@@ -175,7 +183,10 @@ export default function EvaluationTab() {
           eine der Regeln sauber greift (neue 6 tiefe Werte + neue Hilfslinie).
         </p>
       </div>
+        </>
+      )}
 
+      {active === 'mucus' && (
       <div className="card">
         <h3>Zervixschleim: Höhepunkt + 3 Tage</h3>
         <p>Qualitäts-Rangfolge: <code>t &lt; Ø &lt; f &lt; S &lt; S+</code></p>
@@ -201,7 +212,9 @@ export default function EvaluationTab() {
           caption="Der letzte S+-Tag ist der Höhepunkt (H); danach 3 Tage schlechtere Qualität (1–3) – am Abend von Tag 3 ist die Schleim-Auswertung abgeschlossen."
         />
       </div>
+      )}
 
+      {active === 'cervix' && (
       <div className="card">
         <h3>Muttermund: Höhepunkt + 3 Tage hart/geschlossen/tief</h3>
         <p>
@@ -238,6 +251,7 @@ export default function EvaluationTab() {
           fruchtbare Zeitraum.
         </p>
       </div>
+      )}
     </div>
   );
 }

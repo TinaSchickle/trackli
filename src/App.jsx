@@ -1,13 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getAllEntries } from './db.js';
 import { segmentIntoCycles } from './utils/cycles.js';
 import { todayIso } from './utils/dates.js';
-import { archiveCycleChart } from './utils/chartExport.js';
 import EntryForm from './components/EntryForm.jsx';
 import CycleCalendar from './components/CycleCalendar.jsx';
 import Dashboard from './components/Dashboard.jsx';
-import ArchivedCharts from './components/ArchivedCharts.jsx';
-import CycleChart from './components/CycleChart.jsx';
 import StatusTab from './components/StatusTab.jsx';
 import EvaluationTab from './components/EvaluationTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
@@ -25,7 +22,6 @@ export default function App() {
   const [showBackup, setShowBackup] = useState(false);
   const [ovDismissed, setOvDismissed] = useState(null);
   const [pendingPeriodStart, setPendingPeriodStart] = useState(false);
-  const hiddenChartRef = useRef(null);
 
   useEffect(() => {
     getAllEntries().then((data) => {
@@ -55,18 +51,8 @@ export default function App() {
     const isNewPeriodStart =
       savedEntry.isPeriodStart && !entries.some((e) => e.id === savedEntry.id);
 
-    // Vor dem State-Update archivieren: an dieser Stelle spiegelt `cycles`
-    // (und damit das versteckte CycleChart) noch den ALTEN, gerade zu Ende
-    // gehenden Zyklus wider.
+    // Beim Start eines neuen Zyklus an die Datensicherung erinnern.
     if (isNewPeriodStart && currentCycle && currentCycle.entries.length > 0) {
-      try {
-        const svg = hiddenChartRef.current?.querySelector('svg');
-        if (svg) {
-          await archiveCycleChart({ svgElement: svg, cycle: { ...currentCycle, endDate: savedEntry.date } });
-        }
-      } catch (err) {
-        console.error('Chart-Archivierung fehlgeschlagen:', err);
-      }
       setShowBackup(true);
     }
 
@@ -121,7 +107,6 @@ export default function App() {
         {tab === 'rules' && <RulesTab />}
         {tab === 'appRules' && <AppRulesTab />}
         {tab === 'dashboard' && <Dashboard cycles={cycles} />}
-        {tab === 'archive' && <ArchivedCharts />}
       </div>
 
       <Nav active={tab} onChange={setTab} />
@@ -136,25 +121,6 @@ export default function App() {
           onFinish={finishCycleFromModal}
         />
       )}
-
-      {/* Verstecktes Chart für den aktuellen (bzw. gerade endenden) Zyklus,
-          dient ausschließlich als Quelle für die SVG-Archivierung. */}
-      <div
-        ref={hiddenChartRef}
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: 480,
-          height: 240,
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -1,
-        }}
-      >
-        <CycleChart cycle={currentCycle} />
-      </div>
     </div>
   );
 }

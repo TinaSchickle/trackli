@@ -1020,19 +1020,19 @@ textarea:focus-visible {
 .badge-pending { background: color-mix(in srgb, var(--color-rauchblau) 25%, var(--color-surface)); color: var(--color-rauchblau-dark); }
 .badge-done { background: color-mix(in srgb, #7fa06b 30%, var(--color-surface)); color: #4c6440; }
 
-/* Umschalter (Temp · Schleim · Muttermund) in der Auswertung */
-.status-switch {
+/* Umschalter (Temp · Schleim · Muttermund) – Status / Regeln / How To */
+.seg-switch {
   display: flex;
   gap: 6px;
   margin-bottom: 12px;
 }
 
-.status-switch-btn {
+.seg-switch-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   padding: 8px 4px;
   border: 1px solid var(--color-line);
   border-radius: 10px;
@@ -1042,7 +1042,7 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
-.status-switch-btn.active {
+.seg-switch-btn.active {
   border-color: var(--color-ton);
   background: color-mix(in srgb, var(--color-ton) 12%, var(--color-surface));
   color: var(--color-text);

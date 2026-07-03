@@ -1,4 +1,7 @@
-// Rulebook (Sektion 4 der drei NFP-Module) als nachlesbare Referenz.
+// Mess-Anleitung „How To“ (Sektion 4 der drei NFP-Module) als nachlesbare Referenz.
+
+import { useState } from 'react';
+import SignSwitch, { SIGN_OPTIONS } from './SignSwitch.jsx';
 
 function RuleTable({ rules }) {
   return (
@@ -50,6 +53,9 @@ const CERVIX_RULES = [
 ];
 
 export default function RulesTab() {
+  const [active, setActive] = useState('temp');
+  const RULES = { temp: TEMP_RULES, mucus: MUCUS_RULES, cervix: CERVIX_RULES };
+  const TITLE = { temp: '🌡️ Basaltemperatur', mucus: '💧 Zervixschleim', cervix: '👆 Muttermund' };
   return (
     <div className="text-tab">
       <div className="card">
@@ -61,20 +67,12 @@ export default function RulesTab() {
         </p>
       </div>
 
-      <details className="card rule-module" open>
-        <summary><h3>🌡️ Basaltemperatur</h3></summary>
-        <RuleTable rules={TEMP_RULES} />
-      </details>
+      <SignSwitch options={SIGN_OPTIONS} value={active} onChange={setActive} />
 
-      <details className="card rule-module">
-        <summary><h3>💧 Zervixschleim</h3></summary>
-        <RuleTable rules={MUCUS_RULES} />
-      </details>
-
-      <details className="card rule-module">
-        <summary><h3>👆 Muttermund</h3></summary>
-        <RuleTable rules={CERVIX_RULES} />
-      </details>
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>{TITLE[active]}</h3>
+        <RuleTable rules={RULES[active]} />
+      </div>
     </div>
   );
 }
