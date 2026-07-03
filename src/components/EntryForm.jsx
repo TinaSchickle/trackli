@@ -362,8 +362,6 @@ export default function EntryForm({
           <LockedNote>
             Temperaturmessung für diesen Zyklus abgeschlossen – der Eisprung hat
             stattgefunden (Auswertung vom {formatDateDe(evaluation.temperature.completedDate)}).
-            Die Eingabe ist deaktiviert, bis du die Auswertung durch Ändern früherer
-            Werte zurücknimmst.
           </LockedNote>
         ) : (
           <>
@@ -424,8 +422,7 @@ export default function EntryForm({
         ) : mucusLocked ? (
           <LockedNote>
             Schleim-Auswertung für diesen Zyklus abgeschlossen (Höhepunkt +3 Tage,
-            beendet am {formatDateDe(evaluation.mucus.completedDate)}). Die Eingabe ist
-            deaktiviert, bis du die Auswertung durch Ändern früherer Werte zurücknimmst.
+            beendet am {formatDateDe(evaluation.mucus.completedDate)}).
           </LockedNote>
         ) : (
           <>
@@ -479,8 +476,6 @@ export default function EntryForm({
           <LockedNote>
             Muttermund-Auswertung für diesen Zyklus abgeschlossen (Höhepunkt +3 Tage
             hart/geschlossen/tief, beendet am {formatDateDe(evaluation.cervix.completedDate)}).
-            Die Eingabe ist deaktiviert, bis du die Auswertung durch Ändern früherer
-            Werte zurücknimmst.
           </LockedNote>
         ) : (
           <>
