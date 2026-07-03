@@ -849,12 +849,27 @@ textarea:focus-visible {
 .period-toggle small { display: block; line-height: 1.35; }
 .period-toggle small:last-child { color: var(--color-text-soft); }
 
-.messart-row { margin-top: 12px; }
+.messart-row { margin-top: 10px; }
 .messart-row > label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--color-text-soft);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+/* Dezente, kompakte Messart-Auswahl */
+.messart-row .segmented { gap: 4px; }
+.messart-row .segmented button {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+  color: var(--color-text-soft);
+}
+.messart-row .segmented button.active {
+  background: var(--color-muschel);
+  color: var(--color-text);
+  border-color: var(--color-line);
+  font-weight: 500;
 }
 
 .temp-site-hint {

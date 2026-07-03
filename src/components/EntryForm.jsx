@@ -574,13 +574,12 @@ export default function EntryForm({
         </button>
 
         <div className="messart-row">
-          <label>Messart (zu Beginn der Periode festlegen – gilt für den ganzen Zyklus)</label>
+          <label>Messart – gilt für den ganzen Zyklus</label>
           <Segmented
             options={TEMP_SITES.map((s) => ({ value: s, label: s }))}
             value={site}
             onChange={(v) => setCycleField('tempSite', v || 'oral')}
           />
-          <p className="field-hint">Vorgabe: oral. Rektal ist am genauesten.</p>
         </div>
       </div>
 
