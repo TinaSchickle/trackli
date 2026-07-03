@@ -710,7 +710,7 @@ function predictOvulation(cycle, allCycles, dateIso) {
       kind: 'detected',
       date: cycle.ovulation.date,
       day: cycle.ovulation.cycleDay,
-      text: `Eisprung bestätigt um den ${formatDateDe(cycle.ovulation.date)} (Zyklustag ${cycle.ovulation.cycleDay}, ${cycle.ovulation.method}).`,
+      text: `Eisprung bestätigt um den ${formatDateDe(cycle.ovulation.date)} (Zyklustag ${cycle.ovulation.cycleDay}).`,
     };
   }
   // Unmittelbar bevorstehend anhand der aktuellen fruchtbarsten Zeichen.
@@ -751,19 +751,33 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
   const ev = cycle.evaluation;
   const ovulation = predictOvulation(cycle, allCycles, dateIso);
 
+  // Fruchtbarste Zeichen am betrachteten Tag (bester Zeitpunkt für Kinderwunsch).
+  const today = cycle.entries.find((e) => e.date === dateIso);
+  const signToday =
+    !!today &&
+    (today.cervicalMucus === 'S+' || today.cervixState === 'weich' || today.ferning === FERNING_FULL);
+  const dToOv = ovulation.date ? isoDiffDays(dateIso, ovulation.date) : null;
+  const inPeakWindow = dToOv != null && dToOv >= -3 && dToOv <= 0;
+
   let phase, phaseLabel, phaseNote;
   if (ev?.complete && dateIso > ev.infertileFrom) {
     phase = 'infertile';
     phaseLabel = 'Unfruchtbar';
-    phaseNote = `Nach dem Eisprung (unfruchtbar seit dem Abend des ${formatDateDe(ev.infertileFrom)}).`;
+    phaseNote = `Nach dem Eisprung – unfruchtbar seit dem Abend des ${formatDateDe(ev.infertileFrom)}.`;
   } else if (cycleDay <= 5) {
     phase = 'infertile';
     phaseLabel = 'Unfruchtbar';
     phaseNote = 'Frühe Zyklusphase (bis Tag 5) – nach Faustregel unfruchtbar.';
+  } else if (signToday || ovulation.kind === 'imminent' || inPeakWindow) {
+    phase = 'peak';
+    phaseLabel = 'Hochfruchtbar';
+    phaseNote =
+      'Beste Tage für eine Schwangerschaft – zum Verhüten jetzt unbedingt schützen.';
   } else {
     phase = 'fertile';
     phaseLabel = 'Fruchtbar';
-    phaseNote = 'Fruchtbare Phase – bis der Eisprung durch doppelte Kontrolle bestätigt ist.';
+    phaseNote =
+      'Fruchtbare Phase – zum Verhüten schützen; für einen Kinderwunsch günstige Zeit.';
   }
 
   return { cycleDay, phase, phaseLabel, phaseNote, ovulation };

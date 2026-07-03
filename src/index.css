@@ -807,8 +807,9 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.cib-fertility.fertile .cib-badge { background: var(--color-period); }
 .cib-fertility.infertile .cib-badge { background: var(--color-rauchblau-dark); }
+.cib-fertility.fertile .cib-badge { background: var(--color-ton); }
+.cib-fertility.peak .cib-badge { background: var(--color-period); }
 
 .cib-note { font-size: 0.72rem; color: var(--color-text-soft); line-height: 1.35; }
 .cib-empty { font-size: 0.78rem; color: var(--color-text-soft); }

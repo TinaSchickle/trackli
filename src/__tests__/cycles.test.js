@@ -101,6 +101,17 @@ describe('Fruchtbarkeits- & Eisprung-Prognose', () => {
     expect(f.phase).toBe('fertile');
   });
 
+  it('ist um den Eisprung herum hochfruchtbar', () => {
+    const f = fertilityForecast(c1, cycles, c1.entries[12].date); // Tag 13 (Eisprung-Fenster)
+    expect(f.phase).toBe('peak');
+    expect(f.phaseLabel).toBe('Hochfruchtbar');
+  });
+
+  it('nennt keinen Messmethoden-Zusatz mehr in der Eisprung-Info', () => {
+    const f = fertilityForecast(c1, cycles, c1.entries[8].date);
+    expect(f.ovulation.text).not.toMatch(/Temperatur|Schleim|Muttermund/);
+  });
+
   it('ist nach dem bestätigten Eisprung wieder unfruchtbar', () => {
     const last = c1.entries[c1.entries.length - 1].date;
     const f = fertilityForecast(c1, cycles, last);
