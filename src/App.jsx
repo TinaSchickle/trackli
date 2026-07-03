@@ -8,6 +8,10 @@ import CycleCalendar from './components/CycleCalendar.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ArchivedCharts from './components/ArchivedCharts.jsx';
 import CycleChart from './components/CycleChart.jsx';
+import StatusTab from './components/StatusTab.jsx';
+import EvaluationTab from './components/EvaluationTab.jsx';
+import RulesTab from './components/RulesTab.jsx';
+import AppRulesTab from './components/AppRulesTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
 import Nav from './components/Nav.jsx';
 
@@ -76,6 +80,7 @@ export default function App() {
         {tab === 'entry' && (
           <EntryForm
             entries={entries}
+            cycles={cycles}
             date={selectedDate}
             onDateChange={setSelectedDate}
             onSaved={handleEntrySaved}
@@ -91,6 +96,10 @@ export default function App() {
             }}
           />
         )}
+        {tab === 'status' && <StatusTab cycle={currentCycle} />}
+        {tab === 'evaluation' && <EvaluationTab />}
+        {tab === 'rules' && <RulesTab />}
+        {tab === 'appRules' && <AppRulesTab />}
         {tab === 'dashboard' && <Dashboard cycles={cycles} />}
         {tab === 'archive' && <ArchivedCharts />}
       </div>

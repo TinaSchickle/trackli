@@ -1,8 +1,12 @@
 const TABS = [
-  { key: 'entry', label: 'Eintrag' },
-  { key: 'calendar', label: 'Kalender' },
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'archive', label: 'Verlauf' },
+  { key: 'entry', label: 'Eintrag', icon: '✏️' },
+  { key: 'calendar', label: 'Kalender', icon: '📅' },
+  { key: 'status', label: 'Status', icon: '🔎' },
+  { key: 'evaluation', label: 'Auswertung', icon: '📖' },
+  { key: 'rules', label: 'Regeln', icon: '📋' },
+  { key: 'appRules', label: 'App', icon: '⚙️' },
+  { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { key: 'archive', label: 'Verlauf', icon: '🗂️' },
 ];
 
 export default function Nav({ active, onChange }) {
@@ -15,6 +19,7 @@ export default function Nav({ active, onChange }) {
             className={active === t.key ? 'active' : ''}
             onClick={() => onChange(t.key)}
           >
+            <span aria-hidden="true">{t.icon}</span>
             {t.label}
           </button>
         ))}

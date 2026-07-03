@@ -1,21 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { parseIso, toIso, todayIso, addDays } from '../utils/dates.js';
+import {
+  MUCUS,
+  cervixKuerzel,
+  cervixAgenda,
+  cervixScore,
+  formatCents,
+} from '../utils/nfp.js';
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']; // Index = Date.getDay()
-
-const MUCUS_SYMBOLS = {
-  'Nichts spürbar/sichtbar': 'Ø',
-  'Feucht': 'f',
-  'Cremig': 'S',
-  'Spinnbar/glasig (Höhepunkt)': 'S+',
-  'Wässrig': 'W',
-};
-
-const CERVIX_SYMBOLS = {
-  'Geschlossen/fest': 'g',
-  'Leicht geöffnet/mittel': 'm',
-  'Offen/weich': 'o',
-};
 
 const FERNING_LEVELS = {
   'Kein Farnkraut-Muster': 0,
@@ -83,6 +76,7 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
   }, [entries]);
 
   const today = todayIso();
+  const evaluation = cycle?.evaluation ?? null;
 
   // Tag 1 = Zyklusbeginn (Periodenbeginn), Tag 0 = Vortag, bis Tag 40.
   const days = useMemo(() => {
@@ -96,6 +90,51 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
     }
     return list;
   }, [cycle, entryByDate]);
+
+  // Auswertungs-Markierungen (Eintrags-Index → ISO-Datum des Zyklus).
+  const marks = useMemo(() => {
+    const m = {
+      temp: new Map(), // iso -> {lowNum?, higherNum?, firstHigher?, dropped?, extraDay?}
+      mucus: new Map(), // iso -> {peak?, countNum?}
+      cervix: new Map(), // iso -> {peak?, countNum?}
+      coverCents: null,
+      coverFrom: null,
+      coverTo: null,
+    };
+    if (!evaluation || !cycle) return m;
+    const isoOf = (idx) => cycle.entries[idx]?.date;
+    const t = evaluation.temperature;
+
+    if (t.coverCents != null) {
+      m.coverCents = t.coverCents;
+      m.coverFrom = isoOf(t.low6[0]);
+      const lastMarked =
+        t.completedIdx ?? t.extraDayIdx ?? t.higherIdxs[t.higherIdxs.length - 1] ?? t.firstHigherIdx;
+      m.coverTo = isoOf(lastMarked);
+      t.low6.forEach((idx, i) => m.temp.set(isoOf(idx), { lowNum: i + 1 }));
+      t.higherIdxs.forEach((idx, i) =>
+        m.temp.set(isoOf(idx), {
+          higherNum: i + 1,
+          firstHigher: idx === t.firstHigherIdx,
+        })
+      );
+      if (t.droppedIdx != null) m.temp.set(isoOf(t.droppedIdx), { dropped: true });
+      if (t.extraDayIdx != null) m.temp.set(isoOf(t.extraDayIdx), { extraDay: true });
+    }
+
+    const mu = evaluation.mucus;
+    if (mu.peakIdx != null) {
+      m.mucus.set(isoOf(mu.peakIdx), { peak: true });
+      mu.countedIdxs.forEach((idx, i) => m.mucus.set(isoOf(idx), { countNum: i + 1 }));
+    }
+
+    const ce = evaluation.cervix;
+    if (ce.peakIdx != null) {
+      m.cervix.set(isoOf(ce.peakIdx), { peak: true });
+      ce.countedIdxs.forEach((idx, i) => m.cervix.set(isoOf(idx), { countNum: i + 1 }));
+    }
+    return m;
+  }, [evaluation, cycle]);
 
   const tempRows = useMemo(() => {
     let top = TEMP_BASE_MAX;
@@ -157,6 +196,25 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
     return classes.filter(Boolean).join(' ');
   }
 
+  function inCoverRange(iso) {
+    return (
+      marks.coverCents != null &&
+      marks.coverFrom != null &&
+      marks.coverTo != null &&
+      iso >= marks.coverFrom &&
+      iso <= marks.coverTo
+    );
+  }
+
+  const explanations = evaluation
+    ? [
+        ...evaluation.temperature.messages,
+        ...evaluation.mucus.messages,
+        ...evaluation.cervix.messages,
+        ...evaluation.messages,
+      ]
+    : [];
+
   return (
     <div className="card sheet-card">
       <h3 style={{ fontSize: '1rem' }}>Zyklus ab {cycle.startDate.split('-').reverse().join('.')}</h3>
@@ -193,19 +251,63 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
             </tr>
             <tr>
               <th className="sheet-label">Zervixschleim</th>
-              {days.map((d) => (
-                <td key={d.iso} data-iso={d.iso} className={colClass(d)} title={d.entry?.cervicalMucus ?? ''}>
-                  {MUCUS_SYMBOLS[d.entry?.cervicalMucus] ?? ''}
-                </td>
-              ))}
+              {days.map((d) => {
+                const info = d.entry?.cervicalMucus ? MUCUS[d.entry.cervicalMucus] : null;
+                const mark = marks.mucus.get(d.iso);
+                const cls = [
+                  d.entry?.mucusDisturbed ? 'is-notcounted' : '',
+                  mark?.peak ? 'is-peak' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <td
+                    key={d.iso}
+                    data-iso={d.iso}
+                    className={colClass(d, cls)}
+                    title={
+                      info
+                        ? `${info.agenda} – ${info.description}${d.entry?.mucusDisturbed ? ' (Störung – zählt nicht)' : ''}`
+                        : ''
+                    }
+                  >
+                    {info?.symbol ?? ''}
+                    {mark?.peak && <span className="mark-num mark-peak">H</span>}
+                    {mark?.countNum && <span className="mark-num">{mark.countNum}</span>}
+                  </td>
+                );
+              })}
             </tr>
             <tr>
               <th className="sheet-label">Muttermund</th>
-              {days.map((d) => (
-                <td key={d.iso} data-iso={d.iso} className={colClass(d)} title={d.entry?.cervix ?? ''}>
-                  {CERVIX_SYMBOLS[d.entry?.cervix] ?? ''}
-                </td>
-              ))}
+              {days.map((d) => {
+                const score = d.entry ? cervixScore(d.entry) : null;
+                const mark = marks.cervix.get(d.iso);
+                const skipped = d.entry?.cervixSkipped || d.entry?.cervixDisturbed;
+                const cls = [
+                  skipped ? 'is-notcounted' : '',
+                  !skipped && score === 6 ? 'is-fertile' : '',
+                  mark?.peak ? 'is-peak' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <td
+                    key={d.iso}
+                    data-iso={d.iso}
+                    className={colClass(d, `cervix-cell ${cls}`)}
+                    title={
+                      d.entry
+                        ? `${cervixAgenda(d.entry)}${skipped ? ' (übersprungen/Störung – zählt nicht)' : ''}`
+                        : ''
+                    }
+                  >
+                    {d.entry?.cervixSkipped ? '–' : d.entry ? cervixKuerzel(d.entry) : ''}
+                    {mark?.peak && <span className="mark-num mark-peak">H</span>}
+                    {mark?.countNum && <span className="mark-num">{mark.countNum}</span>}
+                  </td>
+                );
+              })}
             </tr>
             <tr>
               <th className="sheet-label">Spucke</th>
@@ -222,23 +324,70 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                 <th className={`sheet-label sheet-temp-label${v % 10 === 0 ? ' is-major' : ''}`}>
                   {(v / 100).toFixed(2).replace('.', ',')}
                 </th>
-                {days.map((d) => (
-                  <td
-                    key={d.iso}
-                    data-iso={d.iso}
-                    className={colClass(d, v % 10 === 0 ? 'is-major' : '')}
-                  >
-                    {tempRowFor(d.entry) === v && <span className="temp-dot" />}
-                  </td>
-                ))}
+                {days.map((d) => {
+                  const mark = marks.temp.get(d.iso);
+                  const notCounted = d.entry?.tempSkipped || d.entry?.tempExcluded;
+                  const cellCls = [
+                    v % 10 === 0 ? 'is-major' : '',
+                    notCounted ? 'is-notcounted' : '',
+                    v === marks.coverCents && inCoverRange(d.iso) ? 'is-coverline' : '',
+                    v === marks.coverCents + 20 &&
+                    inCoverRange(d.iso) &&
+                    marks.temp.get(d.iso)?.higherNum
+                      ? 'is-plusline'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+                  const hasDot = tempRowFor(d.entry) === v;
+                  return (
+                    <td key={d.iso} data-iso={d.iso} className={colClass(d, cellCls)}>
+                      {hasDot && (
+                        <span
+                          className={`temp-dot${mark?.higherNum ? ' is-higher' : ''}${mark?.firstHigher ? ' is-first-higher' : ''}${mark?.dropped ? ' is-dropped' : ''}${notCounted ? ' is-muted' : ''}`}
+                        />
+                      )}
+                      {hasDot && mark?.lowNum && <span className="mark-num mark-low">{mark.lowNum}</span>}
+                      {hasDot && mark?.higherNum && <span className="mark-num mark-high">{mark.higherNum}</span>}
+                      {hasDot && mark?.extraDay && <span className="mark-num mark-high">4</span>}
+                      {hasDot && mark?.dropped && <span className="mark-num mark-dropped">✕</span>}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {marks.coverCents != null && (
+        <div className="sheet-coverinfo">
+          Hilfslinie: {formatCents(marks.coverCents)} °C · feine Linie: +0,2 °C (
+          {formatCents(marks.coverCents + 20)} °C)
+        </div>
+      )}
+
+      {explanations.length > 0 && (
+        <div className="sheet-explanations">
+          {explanations.map((msg, i) => (
+            <p key={i}>ℹ️ {msg}</p>
+          ))}
+        </div>
+      )}
+
       <div className="sheet-legend">
-        <div>Zervixschleim: Ø nichts · f feucht · S cremig · S+ spinnbar/glasig · W wässrig</div>
-        <div>Muttermund: g geschlossen · m mittel · o offen</div>
+        <div>
+          Zervixschleim: t trocken · Ø nichts · f feucht · S feucht &amp; cremig ·
+          S+ spinnbar / glasig · H Höhepunkt · ¹²³ Tage danach
+        </div>
+        <div>
+          Muttermund: h hart · m mittel · w weich | · geschlossen · o leicht offen ·
+          O offen | ↓ tief · → mittel · ↑ hoch (grün = weich/offen/hoch)
+        </div>
+        <div>
+          Temperatur: ¹⁻⁶ tiefe Werte (Basis der Hilfslinie) · ¹⁻³ höhere Werte ·
+          4 = Zusatztag (Ausnahmeregel) · ✕ zählt nicht · grau = übersprungen/ausgeklammert
+        </div>
         <div>
           Spucke: <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
           <FernIcon level={2} /> vollständiges Farnkraut-Muster

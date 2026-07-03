@@ -1,3 +1,5 @@
+import { migrateEntry } from './utils/nfp.js';
+
 const DB_NAME = 'nfp-tracker';
 const DB_VERSION = 1;
 const STORE_ENTRIES = 'entries';
@@ -28,11 +30,20 @@ function tx(db, storeName, mode) {
 
 export async function getAllEntries() {
   const db = await openDb();
-  return new Promise((resolve, reject) => {
+  const raw = await new Promise((resolve, reject) => {
     const req = tx(db, STORE_ENTRIES, 'readonly').getAll();
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+
+  // Altdaten (alte Schleim-Skala, Muttermund als Einzelwert, excluded-Flag)
+  // beim Laden einmalig auf das neue Datenmodell heben und zurückschreiben.
+  const migrated = raw.map((e) => migrateEntry(e));
+  const changed = migrated.filter((m) => m.changed).map((m) => m.entry);
+  if (changed.length > 0) {
+    await Promise.all(changed.map((entry) => putEntry(entry)));
+  }
+  return migrated.map((m) => m.entry);
 }
 
 export async function putEntry(entry) {

@@ -193,19 +193,30 @@ textarea:focus-visible {
   max-width: 480px;
   width: 100%;
   display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
+.bottom-nav-inner::-webkit-scrollbar { display: none; }
+
 .bottom-nav button {
-  flex: 1;
+  flex: 1 0 auto;
+  min-width: 58px;
   background: none;
   border: none;
-  padding: 12px 4px 10px;
-  font-size: 0.78rem;
+  padding: 10px 6px 8px;
+  font-size: 0.68rem;
   color: var(--color-text-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+}
+
+.bottom-nav button span {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .bottom-nav button.active {
@@ -512,3 +523,427 @@ textarea:focus-visible {
   font-weight: 700;
   color: var(--color-text);
 }
+
+/* ── Eintrag: Modul-Blöcke, Segmented-Buttons, Hinweise ─ */
+
+.module-block {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: 12px 14px 4px;
+  margin: 0 0 16px;
+}
+
+.module-block legend {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--color-ton-dark);
+  padding: 0 6px;
+}
+
+.segmented {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.segmented button {
+  flex: 1 1 0;
+  min-width: 52px;
+  padding: 9px 6px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.88rem;
+}
+
+.segmented button.active {
+  background: var(--color-ton);
+  border-color: var(--color-ton-dark);
+  color: #fff;
+  font-weight: 600;
+}
+
+.segmented.is-disabled button,
+.segmented button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-soft);
+  line-height: 1.45;
+}
+
+.learning-hint {
+  background: var(--color-muschel);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.locked-note {
+  margin: 4px 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+  background: var(--color-muschel-light);
+  border: 1px dashed var(--color-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.info-details {
+  position: relative;
+  margin-left: auto;
+}
+
+.info-details summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--color-rauchblau-dark);
+  font-size: 1rem;
+  padding: 0 4px;
+}
+
+.info-details summary::-webkit-details-marker { display: none; }
+
+.info-details p {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+  background: var(--color-muschel-light);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: min(280px, 72vw);
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  box-shadow: var(--shadow-soft);
+}
+
+.period-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.period-toggle.active {
+  background: color-mix(in srgb, var(--color-period) 12%, var(--color-surface));
+  border-color: var(--color-period);
+}
+
+.period-toggle-icon { font-size: 1.3rem; }
+
+.period-toggle strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.period-toggle small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+}
+
+.period-toggle-state {
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--color-period);
+  font-weight: 700;
+}
+
+/* ── Kalender: Auswertungs-Markierungen ─────────────── */
+
+.cycle-sheet td { position: relative; }
+
+.mark-num {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-rauchblau-dark);
+  background: var(--color-surface);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.mark-num.mark-low { color: var(--color-text-soft); }
+.mark-num.mark-high { color: var(--color-ton-dark); }
+.mark-num.mark-dropped { color: var(--color-period); }
+
+.mark-num.mark-peak {
+  color: #fff;
+  background: var(--color-ton-dark);
+}
+
+.cycle-sheet td.is-peak {
+  background: color-mix(in srgb, var(--color-ton) 28%, var(--color-surface));
+  font-weight: 700;
+}
+
+.cycle-sheet td.is-fertile {
+  background: color-mix(in srgb, #7fa06b 24%, var(--color-surface));
+}
+
+.cycle-sheet td.is-notcounted {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(107, 95, 84, 0.14),
+    rgba(107, 95, 84, 0.14) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  color: var(--color-text-soft);
+}
+
+.cycle-sheet td.cervix-cell {
+  font-size: 0.5rem;
+  letter-spacing: -0.4px;
+}
+
+.sheet-temp-row td.is-coverline {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 42%,
+    var(--color-ton-dark) 42%,
+    var(--color-ton-dark) 58%,
+    transparent 58%
+  );
+}
+
+.sheet-temp-row td.is-plusline {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-rauchblau-dark) 0,
+    var(--color-rauchblau-dark) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  background-size: 100% 2px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+}
+
+.temp-dot.is-higher { background: var(--color-ton); }
+.temp-dot.is-first-higher {
+  background: var(--color-period);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-period) 35%, transparent);
+}
+.temp-dot.is-dropped {
+  background: transparent;
+  border: 2px solid var(--color-period);
+  width: 6px;
+  height: 6px;
+}
+.temp-dot.is-muted { opacity: 0.4; }
+
+.sheet-coverinfo {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--color-ton-dark);
+  font-weight: 600;
+}
+
+.sheet-explanations {
+  margin-top: 8px;
+  border-top: 1px solid var(--color-line);
+  padding-top: 8px;
+}
+
+.sheet-explanations p {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+/* ── Status-Tab ─────────────────────────────────────── */
+
+.status-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 99px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.badge-idle { background: var(--color-muschel); color: var(--color-text-soft); }
+.badge-pending { background: color-mix(in srgb, var(--color-rauchblau) 25%, var(--color-surface)); color: var(--color-rauchblau-dark); }
+.badge-done { background: color-mix(in srgb, #7fa06b 30%, var(--color-surface)); color: #4c6440; }
+
+.status-keyfacts {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+
+.status-messages p {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+.status-result {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 8px;
+}
+
+.status-result.done {
+  background: color-mix(in srgb, #7fa06b 18%, var(--color-surface));
+}
+
+.status-result.open {
+  background: var(--color-muschel-light);
+  border: 1px dashed var(--color-line);
+}
+
+/* ── Text-Tabs (Regeln, App-Regeln, Auswertung) ─────── */
+
+.text-tab h3 { font-size: 1.05rem; }
+.text-tab h4 {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  margin: 14px 0 6px;
+}
+.text-tab p, .text-tab li {
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.text-tab ol { padding-left: 20px; margin: 8px 0; }
+
+.rule-module summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rule-module summary::-webkit-details-marker { display: none; }
+
+.rule-module summary h3 { margin: 0; }
+
+.rule-module summary::after {
+  content: '▸';
+  color: var(--color-text-soft);
+  transition: transform 0.15s ease;
+}
+
+.rule-module[open] summary::after { transform: rotate(90deg); }
+
+.rule-list { margin: 12px 0 4px; }
+
+.rule-item {
+  padding: 8px 0;
+  border-top: 1px solid var(--color-muschel);
+}
+
+.rule-item dt {
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+
+.rule-item dd {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+/* ── Beispielbilder im Auswertung-Tab ───────────────── */
+
+.example-figure {
+  margin: 12px 0 4px;
+  background: var(--color-muschel-light);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.example-figure svg { width: 100%; height: auto; display: block; }
+
+.example-figure figcaption {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+.ex-curve { fill: none; stroke: var(--color-rauchblau); stroke-width: 1.6; }
+.ex-dot { fill: var(--color-rauchblau-dark); }
+.ex-dot-higher { fill: var(--color-ton); }
+.ex-dot-dropped { fill: none; stroke: var(--color-period); stroke-width: 1.6; }
+.ex-coverline { stroke: var(--color-ton-dark); stroke-width: 1.6; }
+.ex-plusline { stroke: var(--color-rauchblau-dark); stroke-width: 1; stroke-dasharray: 3 3; }
+.ex-axis { font-size: 8px; fill: var(--color-text-soft); }
+.ex-num { font-size: 9px; font-weight: 700; }
+.ex-num-low { fill: var(--color-text-soft); }
+.ex-num-high { fill: var(--color-ton-dark); }
+.ex-num-dropped { fill: var(--color-period); }
+
+.example-symbolrow {
+  display: flex;
+  gap: 4px;
+}
+
+.example-symbol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 6px 2px 4px;
+}
+
+.example-symbol.is-fertile {
+  background: color-mix(in srgb, #7fa06b 20%, var(--color-surface));
+}
+
+.example-symbol.is-peak {
+  border-color: var(--color-ton-dark);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-ton) 35%, transparent);
+}
+
+.example-symbol-value { font-weight: 700; font-size: 0.9rem; }
+
+.example-symbol-mark {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-ton-dark);
+  min-height: 0.8em;
+}
+
+.example-symbol-day { font-size: 0.6rem; color: var(--color-text-soft); }

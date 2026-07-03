@@ -11,7 +11,7 @@ import {
   Dot,
 } from 'recharts';
 
-const MUCUS_PEAK = 'Spinnbar/glasig (Höhepunkt)';
+const MUCUS_PEAK = 'S+';
 
 const CycleChart = forwardRef(function CycleChart({ cycle }, ref) {
   if (!cycle) {
