@@ -83,7 +83,7 @@ export function cervixKuerzel(entry) {
 
 /** Agenda-Text laut Sektion 2 (fest/zu · Übergang · weich/offen). */
 export function cervixAgenda(entry) {
-  if (entry.cervixSkipped) return '–';
+  if (entry.cervixExcluded) return '–';
   const s = cervixScore(entry);
   if (s == null) return '';
   if (s === 0) return 'fest / zu';
@@ -148,12 +148,26 @@ export function migrateEntry(e) {
     delete n.cervix;
     changed = true;
   }
-  if ('excluded' in n) {
-    n.tempExcluded = !!n.excluded;
+  // Frühere getrennte Skip-/Störungs-Flags zu je einem "ausklammern"-Flag
+  // pro Modul zusammenführen.
+  if ('excluded' in n || 'tempSkipped' in n) {
+    n.tempExcluded = !!(n.excluded || n.tempSkipped || n.tempExcluded);
     delete n.excluded;
+    delete n.tempSkipped;
     changed = true;
   }
-  const boolDefaults = ['tempSkipped', 'tempExcluded', 'mucusDisturbed', 'cervixSkipped', 'cervixDisturbed'];
+  if ('mucusDisturbed' in n) {
+    n.mucusExcluded = !!(n.mucusDisturbed || n.mucusExcluded);
+    delete n.mucusDisturbed;
+    changed = true;
+  }
+  if ('cervixSkipped' in n || 'cervixDisturbed' in n) {
+    n.cervixExcluded = !!(n.cervixSkipped || n.cervixDisturbed || n.cervixExcluded);
+    delete n.cervixSkipped;
+    delete n.cervixDisturbed;
+    changed = true;
+  }
+  const boolDefaults = ['tempExcluded', 'mucusExcluded', 'cervixExcluded'];
   for (const k of boolDefaults) {
     if (!(k in n)) {
       n[k] = false;
@@ -199,7 +213,6 @@ export function evaluateTemperature(entries) {
     if (
       typeof e.temperature === 'number' &&
       !Number.isNaN(e.temperature) &&
-      !e.tempSkipped &&
       !e.tempExcluded
     ) {
       temps.push({ idx, date: e.date, cents: roundedCents(e.temperature) });
@@ -373,7 +386,7 @@ function tempMessages(r, entries) {
 export function evaluateMucus(entries) {
   const valid = [];
   entries.forEach((e, idx) => {
-    if (e.cervicalMucus && MUCUS[e.cervicalMucus] && !e.mucusDisturbed) {
+    if (e.cervicalMucus && MUCUS[e.cervicalMucus] && !e.mucusExcluded) {
       valid.push({ idx, date: e.date, code: e.cervicalMucus });
     }
   });
@@ -449,7 +462,7 @@ export function evaluateMucus(entries) {
 export function evaluateCervix(entries) {
   const valid = [];
   entries.forEach((e, idx) => {
-    if (e.cervixSkipped || e.cervixDisturbed) return;
+    if (e.cervixExcluded) return;
     const s = cervixScore(e);
     if (s != null) valid.push({ idx, date: e.date, score: s });
   });

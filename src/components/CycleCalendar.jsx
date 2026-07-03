@@ -255,7 +255,7 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                 const info = d.entry?.cervicalMucus ? MUCUS[d.entry.cervicalMucus] : null;
                 const mark = marks.mucus.get(d.iso);
                 const cls = [
-                  d.entry?.mucusDisturbed ? 'is-notcounted' : '',
+                  d.entry?.mucusExcluded ? 'is-notcounted' : '',
                   mark?.peak ? 'is-peak' : '',
                 ]
                   .filter(Boolean)
@@ -267,7 +267,7 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                     className={colClass(d, cls)}
                     title={
                       info
-                        ? `${info.agenda} – ${info.description}${d.entry?.mucusDisturbed ? ' (Störung – zählt nicht)' : ''}`
+                        ? `${info.agenda} – ${info.description}${d.entry?.mucusExcluded ? ' (ausgeklammert – zählt nicht)' : ''}`
                         : ''
                     }
                   >
@@ -283,10 +283,10 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
               {days.map((d) => {
                 const score = d.entry ? cervixScore(d.entry) : null;
                 const mark = marks.cervix.get(d.iso);
-                const skipped = d.entry?.cervixSkipped || d.entry?.cervixDisturbed;
+                const excluded = d.entry?.cervixExcluded;
                 const cls = [
-                  skipped ? 'is-notcounted' : '',
-                  !skipped && score === 6 ? 'is-fertile' : '',
+                  excluded ? 'is-notcounted' : '',
+                  !excluded && score === 6 ? 'is-fertile' : '',
                   mark?.peak ? 'is-peak' : '',
                 ]
                   .filter(Boolean)
@@ -298,11 +298,11 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                     className={colClass(d, `cervix-cell ${cls}`)}
                     title={
                       d.entry
-                        ? `${cervixAgenda(d.entry)}${skipped ? ' (übersprungen/Störung – zählt nicht)' : ''}`
+                        ? `${cervixAgenda(d.entry)}${excluded ? ' (ausgeklammert – zählt nicht)' : ''}`
                         : ''
                     }
                   >
-                    {d.entry?.cervixSkipped ? '–' : d.entry ? cervixKuerzel(d.entry) : ''}
+                    {d.entry ? cervixKuerzel(d.entry) || (excluded ? '–' : '') : ''}
                     {mark?.peak && <span className="mark-num mark-peak">H</span>}
                     {mark?.countNum && <span className="mark-num">{mark.countNum}</span>}
                   </td>
@@ -326,7 +326,7 @@ export default function CycleCalendar({ cycle, entries, onSelectDay }) {
                 </th>
                 {days.map((d) => {
                   const mark = marks.temp.get(d.iso);
-                  const notCounted = d.entry?.tempSkipped || d.entry?.tempExcluded;
+                  const notCounted = d.entry?.tempExcluded;
                   const cellCls = [
                     v % 10 === 0 ? 'is-major' : '',
                     notCounted ? 'is-notcounted' : '',

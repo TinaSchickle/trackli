@@ -19,32 +19,25 @@ const FERNING_OPTIONS = [
   'Vollständiges Farnkraut-Muster',
 ];
 
-const TEMP_SKIP_INFO =
-  'Überspringen bei Störfaktoren, die den Messwert verfälschen: Feiern/Alkohol, ' +
-  'zu wenig oder zu viel Schlaf, Zeitzonen-/Umgebungswechsel (Reisen), Stress, ' +
-  'spätabends intensiver Sport, Krankheit/Fieber, Verletzungen, Medikamente, ' +
-  'Supplements, Cortison.';
-
 const TEMP_EXCLUDE_INFO =
-  'Ausklammern nur, wenn der Wert nach OBEN aus dem Tieflagen-Niveau der ' +
-  '1. Zyklushälfte herausragt UND durch einen bekannten Störfaktor erklärbar ist ' +
-  '(beides). Der Tag wird bei der Auswertung komplett übersprungen – wie eine Lücke.';
+  'Ausklammern bei Störfaktoren, die den Messwert verfälschen: Feiern/Alkohol, zu wenig ' +
+  'oder zu viel Schlaf, Zeitzonen-/Umgebungswechsel (Reisen), Stress, spätabends ' +
+  'intensiver Sport, Krankheit/Fieber, Verletzungen, Medikamente, Supplements, Cortison. ' +
+  'Ein eingetragener Wert bleibt erhalten, zählt aber bei der Auswertung nicht mit ' +
+  '(wie eine Lücke). Auch nutzen, wenn gar nicht gemessen wurde.';
 
-const MUCUS_DISTURB_INFO =
-  'Störung markieren, wenn etwas in die Sekretbildung eingreift: Sperma, Gleitgel, ' +
-  'Infektionen; Medikamente, die auf Schleimhäute/Drüsen wirken (z.B. Schleimlöser, ' +
-  'Augentropfen, Nasenspray). Achtung: Erregungsschleim nicht mit Zervixschleim ' +
-  'verwechseln (verschwindet schnell). Gestörte Tage zählen bei der Auswertung nicht mit.';
+const MUCUS_EXCLUDE_INFO =
+  'Ausklammern, wenn etwas in die Sekretbildung eingreift: Sperma, Gleitgel, Infektionen; ' +
+  'Medikamente, die auf Schleimhäute/Drüsen wirken (z.B. Schleimlöser, Augentropfen, ' +
+  'Nasenspray). Achtung: Erregungsschleim nicht mit Zervixschleim verwechseln ' +
+  '(verschwindet schnell). Ausgeklammerte Tage zählen bei der Auswertung nicht mit.';
 
-const CERVIX_SKIP_INFO =
-  'Überspringen bei Blutung (nicht tasten – Infektionsrisiko), Infektion, sexueller ' +
-  'Erregung oder Unsicherheit. Der Tag wird im Kalender ausgegraut und zählt bei der ' +
-  'Auswertung nicht mit.';
-
-const CERVIX_DISTURB_INFO =
-  'Störung markieren bei bekanntem Störfaktor: Infektionen/Entzündungen, Zysten/Polypen, ' +
-  'kurz nach Geburt oder in der Stillzeit, Beckenboden-/Senkungsbefunde. Bei anhaltenden ' +
-  'Auffälligkeiten (Schmerz, Blutung außerhalb der Regel, tastbare Knoten) ärztlich abklären.';
+const CERVIX_EXCLUDE_INFO =
+  'Ausklammern bei Blutung (nicht tasten – Infektionsrisiko), sexueller Erregung, ' +
+  'Infektionen/Entzündungen, Zysten/Polypen, kurz nach Geburt/Stillzeit, ' +
+  'Beckenboden-/Senkungsbefunden oder Unsicherheit. Der Tag wird ausgegraut und zählt ' +
+  'bei der Auswertung nicht mit. Bei anhaltenden Auffälligkeiten (Schmerz, Blutung ' +
+  'außerhalb der Regel, tastbare Knoten) ärztlich abklären.';
 
 function emptyEntry(dateIso) {
   return {
@@ -52,15 +45,13 @@ function emptyEntry(dateIso) {
     date: dateIso,
     temperature: '',
     tempSite: null,
-    tempSkipped: false,
     tempExcluded: false,
     cervicalMucus: null,
-    mucusDisturbed: false,
+    mucusExcluded: false,
     cervixFirmness: null,
     cervixOpening: null,
     cervixPosition: null,
-    cervixSkipped: false,
-    cervixDisturbed: false,
+    cervixExcluded: false,
     ferning: '',
     notes: '',
     isPeriodStart: false,
@@ -200,11 +191,11 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
     const toSave = {
       ...form,
       temperature:
-        form.temperature === '' || form.temperature == null || form.tempSkipped
+        form.temperature === '' || form.temperature == null
           ? null
           : Number(form.temperature),
       tempSite:
-        form.temperature === '' || form.temperature == null || form.tempSkipped
+        form.temperature === '' || form.temperature == null
           ? form.tempSite
           : (form.tempSite ?? effectiveSite ?? null),
       cervicalMucus: form.cervicalMucus || null,
@@ -292,7 +283,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                   max="41"
                   step="1"
                   aria-label="Temperatur Vorkommastelle"
-                  disabled={form.tempSkipped}
                   value={tempInt}
                   onChange={(e) => changeTemp(e.target.value, tempDec)}
                   onBlur={() => { if (tempInt === '') changeTemp('36', tempDec); }}
@@ -305,7 +295,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                   maxLength={2}
                   placeholder="55"
                   aria-label="Temperatur Nachkommastellen"
-                  disabled={form.tempSkipped}
                   value={tempDec}
                   onChange={(e) =>
                     changeTemp(tempInt, e.target.value.replace(/\D/g, '').slice(0, 2))
@@ -320,7 +309,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                 options={TEMP_SITES.map((s) => ({ value: s, label: s }))}
                 value={effectiveSite}
                 onChange={changeSite}
-                disabled={form.tempSkipped}
               />
               {fixedSite && (
                 <p className="field-hint">
@@ -331,26 +319,13 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
 
             <div className="field checkbox-row">
               <input
-                id="tempSkipped"
-                type="checkbox"
-                checked={form.tempSkipped}
-                onChange={(e) => update('tempSkipped', e.target.checked)}
-              />
-              <label htmlFor="tempSkipped" style={{ margin: 0 }}>
-                Messung überspringen
-              </label>
-              <InfoToggle text={TEMP_SKIP_INFO} />
-            </div>
-
-            <div className="field checkbox-row">
-              <input
                 id="tempExcluded"
                 type="checkbox"
                 checked={form.tempExcluded}
                 onChange={(e) => update('tempExcluded', e.target.checked)}
               />
               <label htmlFor="tempExcluded" style={{ margin: 0 }}>
-                Wert ausklammern (Störung)
+                Messung ausklammern (Störung)
               </label>
               <InfoToggle text={TEMP_EXCLUDE_INFO} />
             </div>
@@ -395,15 +370,15 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
 
             <div className="field checkbox-row">
               <input
-                id="mucusDisturbed"
+                id="mucusExcluded"
                 type="checkbox"
-                checked={form.mucusDisturbed}
-                onChange={(e) => update('mucusDisturbed', e.target.checked)}
+                checked={form.mucusExcluded}
+                onChange={(e) => update('mucusExcluded', e.target.checked)}
               />
-              <label htmlFor="mucusDisturbed" style={{ margin: 0 }}>
-                Störung
+              <label htmlFor="mucusExcluded" style={{ margin: 0 }}>
+                Messung ausklammern (Störung)
               </label>
-              <InfoToggle text={MUCUS_DISTURB_INFO} />
+              <InfoToggle text={MUCUS_EXCLUDE_INFO} />
             </div>
           </>
         )}
@@ -439,7 +414,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                 }))}
                 value={form.cervixFirmness}
                 onChange={(v) => update('cervixFirmness', v)}
-                disabled={form.cervixSkipped}
               />
             </div>
 
@@ -452,7 +426,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                 }))}
                 value={form.cervixOpening}
                 onChange={(v) => update('cervixOpening', v)}
-                disabled={form.cervixSkipped}
               />
             </div>
 
@@ -465,7 +438,6 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
                 }))}
                 value={form.cervixPosition}
                 onChange={(v) => update('cervixPosition', v)}
-                disabled={form.cervixSkipped}
               />
               <p className="field-hint">
                 Je weicher, offener und höher, desto fruchtbarer – je härter,
@@ -475,28 +447,15 @@ export default function EntryForm({ entries = [], cycles = [], date, onDateChang
 
             <div className="field checkbox-row">
               <input
-                id="cervixSkipped"
+                id="cervixExcluded"
                 type="checkbox"
-                checked={form.cervixSkipped}
-                onChange={(e) => update('cervixSkipped', e.target.checked)}
+                checked={form.cervixExcluded}
+                onChange={(e) => update('cervixExcluded', e.target.checked)}
               />
-              <label htmlFor="cervixSkipped" style={{ margin: 0 }}>
-                Beobachtung übersprungen
+              <label htmlFor="cervixExcluded" style={{ margin: 0 }}>
+                Messung ausklammern (Störung)
               </label>
-              <InfoToggle text={CERVIX_SKIP_INFO} />
-            </div>
-
-            <div className="field checkbox-row">
-              <input
-                id="cervixDisturbed"
-                type="checkbox"
-                checked={form.cervixDisturbed}
-                onChange={(e) => update('cervixDisturbed', e.target.checked)}
-              />
-              <label htmlFor="cervixDisturbed" style={{ margin: 0 }}>
-                Störung
-              </label>
-              <InfoToggle text={CERVIX_DISTURB_INFO} />
+              <InfoToggle text={CERVIX_EXCLUDE_INFO} />
             </div>
           </>
         )}

@@ -29,7 +29,7 @@ export function segmentIntoCycles(allEntries) {
     // Muttermund-Beobachtung zur Auswertung heranziehen (Sensiplan: 2–3 Zyklen).
     const cervixLearning = priorCyclesWithCervix < 2;
     const hasCervixData = cycleEntries.some(
-      (e) => cervixScore(e) != null && !e.cervixSkipped && !e.cervixDisturbed
+      (e) => cervixScore(e) != null && !e.cervixExcluded
     );
     if (hasCervixData) priorCyclesWithCervix++;
 
