@@ -297,13 +297,18 @@ export default function EntryForm({
               <strong>{site}</strong>
             </div>
             <div className={`cib-fertility ${forecast.phase}`}>
-              <span className="cib-badge">{forecast.phaseLabel}</span>
-              <span className="cib-note">{forecast.phaseNote}</span>
+              <span className="cib-badge">
+                {forecast.phaseLabel}
+                {forecast.phase === 'infertile' ? '*' : ''}
+              </span>
+              <span className="cib-note">{forecast.phaseNote} {forecast.ovulation.text}</span>
             </div>
-            <div className="cib-row cib-ovu">
-              <span>Eisprung</span>
-              <strong>{forecast.ovulation.text}</strong>
-            </div>
+            {forecast.phase === 'infertile' && (
+              <div className="cib-disclaimer">
+                * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der Messungen –
+                Softwarefehler vorbehalten, keine Haftung.
+              </div>
+            )}
           </>
         ) : (
           <div className="cib-empty">
