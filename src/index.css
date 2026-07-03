@@ -842,27 +842,31 @@ textarea:focus-visible {
 .cycle-setup {
   border: 1px dashed var(--color-line);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 10px;
   margin-bottom: 16px;
 }
 
 .period-toggle small { display: block; line-height: 1.35; }
 .period-toggle small:last-child { color: var(--color-text-soft); }
 
-.messart-row { margin-top: 10px; }
-.messart-row > label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--color-text-soft);
-  margin-bottom: 4px;
+/* Dezente, kompakte Messart-Auswahl – Label und Auswahl in einer Zeile */
+.messart-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-
-/* Dezente, kompakte Messart-Auswahl */
-.messart-row .segmented { gap: 4px; }
+.messart-row > label {
+  font-size: 0.7rem;
+  color: var(--color-text-soft);
+  margin: 0;
+}
+.messart-row .segmented { gap: 3px; }
 .messart-row .segmented button {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  border-radius: 8px;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+  border-radius: 6px;
   color: var(--color-text-soft);
 }
 .messart-row .segmented button.active {
