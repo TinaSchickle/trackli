@@ -565,9 +565,8 @@ export default function EntryForm({
           <span className="period-toggle-icon" aria-hidden="true">🩸</span>
           <span>
             <strong>Periodenbeginn</strong>
-            <small>markiert den Zyklusstart (Tag 1)</small>
             {lastPeriodStart && (
-              <small>Letzter Periodenstart: {formatDateDe(lastPeriodStart)}</small>
+              <small>Letzter Start: {formatDateDe(lastPeriodStart)}</small>
             )}
           </span>
           <span className="period-toggle-state">{form.isPeriodStart ? '✓' : ''}</span>
