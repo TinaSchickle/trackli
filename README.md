@@ -34,7 +34,8 @@ lokal wie bisher.
    Email* → „Confirm email" ausschalten, wenn du dich ohne Bestätigungslink
    direkt anmelden willst (bei einem privaten Ein-Personen-Konto praktisch).
 4. **Zugangsdaten holen:** *Project Settings → API* → `Project URL` und den
-   `anon public`-Key kopieren.
+   **Publishable key** kopieren (früher „anon public"-Key genannt – nicht den
+   „Secret key" nehmen, der gehört niemals in die App).
 5. **Lokal (Dev):** `.env.example` nach `.env.local` kopieren und die beiden
    Werte eintragen (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
 6. **GitHub Pages (Prod):** im Repo unter *Settings → Secrets and variables →
