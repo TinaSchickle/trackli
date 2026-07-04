@@ -43,6 +43,11 @@ export default function App() {
   // Vorheriger Anmeldezustand, um echtes Abmelden vom „noch nie angemeldet"-
   // Start zu unterscheiden (nur beim echten Abmelden lokale Daten löschen).
   const prevUserIdRef = useRef(undefined);
+  // Auth-Ereignisse streng nacheinander abarbeiten. Ein schnelles Abmelden+
+  // Anmelden darf sich nicht überlappen, sonst startet das Anmelde-Handling
+  // (Sync/Anzeige), bevor die lokalen Daten des vorherigen Kontos vollständig
+  // gelöscht sind – und fremde Einträge würden kurz sichtbar.
+  const authQueueRef = useRef(Promise.resolve());
 
   async function reloadEntries() {
     const data = await getAllEntries();
@@ -88,35 +93,41 @@ export default function App() {
   useEffect(() => {
     if (!isCloudConfigured) return;
     getUser().then(setUser);
-    const unsub = onAuthChange(async (u, event) => {
-      // Rückkehr über den Zurücksetzen-Link: Dialog mit „neues Passwort setzen"
-      // öffnen. Der Sync-/Isolationsteil unten läuft trotzdem normal weiter.
-      if (event === 'PASSWORD_RECOVERY') {
-        setRecovery(true);
-        setShowAccount(true);
-      }
-      const prevId = prevUserIdRef.current;
-      prevUserIdRef.current = u?.id ?? null;
-      setUser(u);
-      if (u) {
-        // Nach erfolgreicher Anmeldung den Konto-Dialog automatisch schließen,
-        // damit er nicht ungefragt offen bleibt. Beim Passwort-Zurücksetzen
-        // (PASSWORD_RECOVERY) bleibt er offen, weil dort noch etwas zu tun ist.
-        if (event !== 'PASSWORD_RECOVERY') setShowAccount(false);
-        // Fremde lokale Daten (anderes Konto) vor dem Sync verwerfen; eigene
-        // bzw. herrenlose Alt-Daten werden übernommen.
-        await prepareLocalDataForUser(u.id);
-        runSync();
-      } else {
-        // Nur beim echten Abmelden (vorher war jemand angemeldet) lokale Daten
-        // löschen – nicht beim initialen „noch nie angemeldet"-Zustand, dessen
-        // Daten bei der ersten Anmeldung noch übernommen werden sollen.
-        if (prevId) {
-          await releaseLocalData();
-          await reloadEntries();
+    const unsub = onAuthChange((u, event) => {
+      // Jedes Auth-Ereignis hinten an die Warteschlange hängen, damit sie
+      // strikt der Reihe nach abgearbeitet werden (siehe authQueueRef).
+      authQueueRef.current = authQueueRef.current.then(async () => {
+        // Rückkehr über den Zurücksetzen-Link: Dialog mit „neues Passwort setzen"
+        // öffnen. Der Sync-/Isolationsteil unten läuft trotzdem normal weiter.
+        if (event === 'PASSWORD_RECOVERY') {
+          setRecovery(true);
+          setShowAccount(true);
         }
-        setLastSyncAt(null);
-      }
+        const prevId = prevUserIdRef.current;
+        prevUserIdRef.current = u?.id ?? null;
+        setUser(u);
+        if (u) {
+          // Nach erfolgreicher Anmeldung den Konto-Dialog automatisch schließen,
+          // damit er nicht ungefragt offen bleibt. Beim Passwort-Zurücksetzen
+          // (PASSWORD_RECOVERY) bleibt er offen, weil dort noch etwas zu tun ist.
+          if (event !== 'PASSWORD_RECOVERY') setShowAccount(false);
+          // Fremde lokale Daten (anderes Konto) vor dem Sync verwerfen; eigene
+          // bzw. herrenlose Alt-Daten werden übernommen. Erst danach anzeigen,
+          // damit nie fremde Einträge kurz aufblitzen.
+          await prepareLocalDataForUser(u.id);
+          await reloadEntries();
+          runSync();
+        } else {
+          // Nur beim echten Abmelden (vorher war jemand angemeldet) lokale Daten
+          // löschen – nicht beim initialen „noch nie angemeldet"-Zustand, dessen
+          // Daten bei der ersten Anmeldung noch übernommen werden sollen.
+          if (prevId) {
+            await releaseLocalData();
+            await reloadEntries();
+          }
+          setLastSyncAt(null);
+        }
+      });
     });
     return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps

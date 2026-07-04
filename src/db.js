@@ -97,13 +97,13 @@ export async function prepareLocalDataForUser(userId) {
   }
 }
 
-// Beim Abmelden aufrufen: lokale Daten entfernen und die Besitzer-Marke lösen.
+// Beim Abmelden aufrufen: lokale Daten entfernen. Die Besitzer-Marke bleibt
+// bewusst stehen: Meldet sich danach ein *anderes* Konto an, greift so weiterhin
+// die Mismatch-Prüfung in prepareLocalDataForUser (löschen), statt die Daten
+// fälschlich als „herrenlos" zu übernehmen. Würden wir die Marke hier löschen,
+// könnte ein schnelles Abmelden+Anmelden dazu führen, dass das neue Konto noch
+// nicht fertig gelöschte Daten des vorherigen Kontos übernimmt.
 export async function releaseLocalData() {
-  try {
-    localStorage.removeItem(LOCAL_OWNER_KEY);
-  } catch {
-    /* ignorieren */
-  }
   await clearLocalData();
 }
 
