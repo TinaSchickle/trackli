@@ -36,6 +36,9 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [syncError, setSyncError] = useState(null);
+  // Kam der Nutzer über einen „Passwort zurücksetzen"-Link zurück, soll er ein
+  // neues Passwort setzen, statt direkt in die App zu springen.
+  const [recovery, setRecovery] = useState(false);
   const syncRunning = useRef(false);
   // Vorheriger Anmeldezustand, um echtes Abmelden vom „noch nie angemeldet"-
   // Start zu unterscheiden (nur beim echten Abmelden lokale Daten löschen).
@@ -85,7 +88,13 @@ export default function App() {
   useEffect(() => {
     if (!isCloudConfigured) return;
     getUser().then(setUser);
-    const unsub = onAuthChange(async (u) => {
+    const unsub = onAuthChange(async (u, event) => {
+      // Rückkehr über den Zurücksetzen-Link: Dialog mit „neues Passwort setzen"
+      // öffnen. Der Sync-/Isolationsteil unten läuft trotzdem normal weiter.
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecovery(true);
+        setShowAccount(true);
+      }
       const prevId = prevUserIdRef.current;
       prevUserIdRef.current = u?.id ?? null;
       setUser(u);
@@ -292,7 +301,12 @@ export default function App() {
           syncing={syncing}
           lastSyncAt={lastSyncAt}
           syncError={syncError}
-          onClose={() => setShowAccount(false)}
+          recovery={recovery}
+          onRecoveryDone={() => setRecovery(false)}
+          onClose={() => {
+            setShowAccount(false);
+            setRecovery(false);
+          }}
         />
       )}
 

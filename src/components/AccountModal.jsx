@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
-import { signIn, signUp, signOut, isAdmin } from '../cloud/auth.js';
+import {
+  signIn,
+  signUp,
+  signOut,
+  isAdmin,
+  sendPasswordReset,
+  updatePassword,
+} from '../cloud/auth.js';
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -18,6 +25,8 @@ export default function AccountModal({
   syncing,
   lastSyncAt,
   syncError,
+  recovery,
+  onRecoveryDone,
   onClose,
 }) {
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
@@ -60,6 +69,45 @@ export default function AccountModal({
     }
   }
 
+  // „Passwort vergessen": Zurücksetzen-E-Mail anfordern.
+  async function handleForgot() {
+    setError(null);
+    setInfo(null);
+    const mail = email.trim();
+    if (!mail) {
+      setError('Bitte zuerst deine E-Mail oben eingeben.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendPasswordReset(mail);
+      setInfo(
+        'Wir haben dir eine E-Mail geschickt. Öffne den Link darin, um ein neues Passwort zu setzen.'
+      );
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Nach Rückkehr über den Zurücksetzen-Link: neues Passwort speichern.
+  async function handleNewPassword(e) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setBusy(true);
+    try {
+      await updatePassword(password);
+      setPassword('');
+      onRecoveryDone?.(); // zeigt danach die „Angemeldet als …"-Ansicht
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
@@ -74,7 +122,37 @@ export default function AccountModal({
           </p>
         )}
 
-        {isCloudConfigured && user && (
+        {isCloudConfigured && recovery && (
+          <>
+            <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
+              Wähle jetzt ein neues Passwort für dein Konto.
+            </p>
+            <form onSubmit={handleNewPassword}>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
+                Neues Passwort
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ width: '100%', marginBottom: 14, boxSizing: 'border-box' }}
+              />
+              {error && (
+                <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 0 }}>
+                  {error}
+                </p>
+              )}
+              <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
+                {busy ? 'Bitte warten…' : 'Neues Passwort speichern'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {isCloudConfigured && user && !recovery && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
               Angemeldet als <strong>{user.email}</strong>
@@ -107,7 +185,7 @@ export default function AccountModal({
           </>
         )}
 
-        {isCloudConfigured && !user && (
+        {isCloudConfigured && !user && !recovery && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
               {mode === 'signin'
@@ -151,6 +229,26 @@ export default function AccountModal({
               <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
                 {busy ? 'Bitte warten…' : mode === 'signin' ? 'Anmelden' : 'Konto anlegen'}
               </button>
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={handleForgot}
+                  disabled={busy}
+                  style={{
+                    display: 'block',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    marginBottom: 12,
+                    color: 'var(--color-text-soft)',
+                    fontSize: '0.85rem',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Passwort vergessen?
+                </button>
+              )}
             </form>
             <button
               className="btn-secondary"

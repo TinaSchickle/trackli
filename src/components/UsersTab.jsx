@@ -34,11 +34,30 @@ export default function UsersTab({ currentUser }) {
   }
 
   if (error) {
+    // Häufigster Fall: die "profiles"-Tabelle wurde in Supabase noch nicht
+    // angelegt (der profiles-Teil aus supabase-setup.sql wurde nie ausgeführt).
+    // Supabase meldet das als "schema cache"-Fehler. Dann eine klare Anleitung
+    // statt der rohen Fehlermeldung zeigen.
+    const missingTable = /schema cache|public\.profiles/i.test(error);
     return (
       <div className="text-tab">
-        <p style={{ color: 'var(--color-danger, #b3261e)' }}>
-          Nutzer konnten nicht geladen werden: {error}
-        </p>
+        {missingTable ? (
+          <>
+            <p style={{ color: 'var(--color-danger, #b3261e)' }}>
+              Die Nutzerliste ist in der Cloud noch nicht eingerichtet.
+            </p>
+            <p style={{ color: 'var(--color-text-soft)', fontSize: '0.9rem' }}>
+              Führe im Supabase-Dashboard unter „SQL Editor“ den{' '}
+              <code>profiles</code>-Teil aus <code>supabase-setup.sql</code> aus
+              (Tabelle, Policy und Trigger). Danach erscheinen die registrierten
+              Konten hier automatisch.
+            </p>
+          </>
+        ) : (
+          <p style={{ color: 'var(--color-danger, #b3261e)' }}>
+            Nutzer konnten nicht geladen werden: {error}
+          </p>
+        )}
       </div>
     );
   }

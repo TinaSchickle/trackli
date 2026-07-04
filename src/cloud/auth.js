@@ -56,12 +56,30 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-// Ruft cb bei jeder Anmelde-/Abmelde-Änderung mit dem aktuellen User (oder null).
+// Schickt eine „Passwort zurücksetzen"-E-Mail. Der Link darin führt zurück in
+// die App (redirectTo); dort feuert dann ein PASSWORD_RECOVERY-Ereignis, worauf
+// der Nutzer ein neues Passwort setzen kann.
+export async function sendPasswordReset(email) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const redirectTo = window.location.origin + window.location.pathname;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
+}
+
+// Setzt das Passwort des aktuell (auch per Recovery-Link) angemeldeten Kontos.
+export async function updatePassword(newPassword) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+// Ruft cb bei jeder Anmelde-/Abmelde-Änderung mit (user, event) auf.
+// event ist z.B. 'SIGNED_IN', 'SIGNED_OUT' oder 'PASSWORD_RECOVERY'.
 // Gibt eine Abmelde-Funktion zurück.
 export function onAuthChange(cb) {
   if (!isCloudConfigured) return () => {};
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    cb(session?.user ?? null);
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    cb(session?.user ?? null, event);
   });
   return () => data.subscription.unsubscribe();
 }
