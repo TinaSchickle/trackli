@@ -399,7 +399,7 @@ export default function EntryForm({
 
       {/* ── Datum ─────────────────────────────────────── */}
       <div className="field">
-        <label htmlFor="date">Datum (← → Tag wechseln)</label>
+        <label htmlFor="date">Datum</label>
         <div className="date-nav">
           <button
             type="button"
