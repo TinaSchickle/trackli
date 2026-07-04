@@ -52,11 +52,8 @@ function emptyEntry(dateIso) {
     ferning: '',
     notes: '',
     isPeriodStart: false,
-    // Zyklus-Flags (nur auf dem Starteintrag relevant): welche Zeichen gelten.
-    trackTemp: true,
-    trackMucus: true,
-    trackCervix: true,
-    trackFerning: true,
+    // Zyklus-Flags werden NICHT vorbelegt: fehlt die Angabe, erbt der Zyklus die
+    // Einstellung des vorigen (deaktivierte Zeichen wirken durchgängig weiter).
   };
 }
 
@@ -105,7 +102,7 @@ function ModuleDisable({ id, checked, onChange }) {
   return (
     <label className="module-disable" htmlFor={id}>
       <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      Für diesen Zyklus deaktivieren
+      Deaktivieren (bleibt aus, bis wieder aktiviert)
     </label>
   );
 }
@@ -113,7 +110,8 @@ function ModuleDisable({ id, checked, onChange }) {
 function DisabledNote() {
   return (
     <p className="disabled-note">
-      Für diesen Zyklus deaktiviert – wird ignoriert und nicht im Kalender angezeigt.
+      Deaktiviert – für den ganzen Zyklus ignoriert und nicht im Kalender angezeigt.
+      Bleibt auch in Folgezyklen aus, bis du es wieder aktivierst.
     </p>
   );
 }
@@ -183,13 +181,19 @@ export default function EntryForm({
   // Formular lesen (ungespeicherte Änderung), sonst aus dem gespeicherten Eintrag.
   const isStartDay = !!cycle && activeDate === cycle.startDate;
   const startEntry = cycle ? entryByDate.get(cycle.startDate) : null;
-  const src = isStartDay ? form : startEntry;
-  const tracks = {
-    temp: src?.trackTemp ?? true,
-    mucus: src?.trackMucus ?? true,
-    cervix: src?.trackCervix ?? true,
-    ferning: src?.trackFerning ?? true,
-  };
+  // Innerhalb eines Zyklus gilt die (durchgereichte) Zyklus-Auflösung. Ohne Zyklus
+  // (neuer, noch ungespeicherter Start) erbt das Formular vom letzten Zyklus.
+  const inheritedTracks = cycles.length
+    ? cycles[cycles.length - 1].tracks
+    : { temp: true, mucus: true, cervix: true, ferning: true };
+  const tracks = cycle
+    ? cycle.tracks
+    : {
+        temp: form.trackTemp ?? inheritedTracks.temp,
+        mucus: form.trackMucus ?? inheritedTracks.mucus,
+        cervix: form.trackCervix ?? inheritedTracks.cervix,
+        ferning: form.trackFerning ?? inheritedTracks.ferning,
+      };
   const site = isStartDay ? form.tempSite ?? 'oral' : cycleSite(cycle);
   const lastPeriodStart = cycles.length ? cycles[cycles.length - 1].startDate : null;
 

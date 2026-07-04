@@ -18,6 +18,9 @@ export function segmentIntoCycles(allEntries) {
 
   const cycles = [];
   let priorCyclesWithCervix = 0;
+  // Deaktivierte Zeichen wirken durchgängig: ein Zyklus ohne eigene Angabe
+  // übernimmt die Einstellung des vorigen Zyklus (bis der Nutzer sie ändert).
+  let runningTracks = { temp: true, mucus: true, cervix: true, ferning: true };
 
   for (let c = 0; c < startIndices.length; c++) {
     const start = startIndices[c];
@@ -33,14 +36,16 @@ export function segmentIntoCycles(allEntries) {
     );
     if (hasCervixData) priorCyclesWithCervix++;
 
-    // Auswertungs-Flags werden pro Zyklus auf dem Starteintrag gespeichert.
+    // Auswertungs-Flags liegen auf dem Starteintrag; fehlt eine Angabe, gilt
+    // die (durchgereichte) Einstellung des vorigen Zyklus.
     const first = cycleEntries[0];
     const tracks = {
-      temp: first.trackTemp ?? true,
-      mucus: first.trackMucus ?? true,
-      cervix: first.trackCervix ?? true,
-      ferning: first.trackFerning ?? true,
+      temp: first.trackTemp ?? runningTracks.temp,
+      mucus: first.trackMucus ?? runningTracks.mucus,
+      cervix: first.trackCervix ?? runningTracks.cervix,
+      ferning: first.trackFerning ?? runningTracks.ferning,
     };
+    runningTracks = tracks;
 
     cycles.push({
       id: cycleEntries[0].date,
