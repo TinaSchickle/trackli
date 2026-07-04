@@ -398,7 +398,7 @@ export default function EntryForm({
       </div>
 
       {/* ── Datum ─────────────────────────────────────── */}
-      <div className="field">
+      <div className="field field-date">
         <label htmlFor="date">Datum</label>
         <div className="date-nav">
           <button

@@ -639,6 +639,11 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.field-date label,
+.field-date .field-hint {
+  text-align: center;
+}
+
 .learning-hint {
   background: var(--color-muschel);
   border-radius: 8px;
