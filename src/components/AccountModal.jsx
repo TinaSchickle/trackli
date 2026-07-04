@@ -111,7 +111,7 @@ export default function AccountModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-        <h3>Konto &amp; Sync</h3>
+        <h3>Konto</h3>
 
         {!isCloudConfigured && (
           <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem' }}>
@@ -156,8 +156,7 @@ export default function AccountModal({
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
               Angemeldet als <strong>{user.email}</strong>
-              {isAdmin(user) && ' (Administrator)'}. Deine Daten werden
-              zwischen deinen Geräten synchronisiert.
+              {isAdmin(user) && ' (Administrator)'}.
             </p>
             <div
               style={{
