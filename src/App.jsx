@@ -11,6 +11,7 @@ import StatusTab from './components/StatusTab.jsx';
 import EvaluationTab from './components/EvaluationTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
 import AppRulesTab from './components/AppRulesTab.jsx';
+import UsersTab from './components/UsersTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
 import AccountModal from './components/AccountModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
@@ -277,6 +278,7 @@ export default function App() {
         {activeTab === 'evaluation' && <EvaluationTab />}
         {activeTab === 'rules' && <RulesTab initialSign={guideSign} />}
         {activeTab === 'appRules' && <AppRulesTab />}
+        {activeTab === 'users' && <UsersTab currentUser={user} />}
         {activeTab === 'dashboard' && <Dashboard cycles={cycles} />}
       </div>
 

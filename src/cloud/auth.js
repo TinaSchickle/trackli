@@ -13,6 +13,19 @@ export function isAdmin(user) {
   return Boolean(email && ADMIN_EMAILS.includes(email));
 }
 
+// Liste aller registrierten Nutzer (nur E-Mail + Anmeldedatum). Liefert dank
+// Row-Level-Security nur dann alle Zeilen zurück, wenn das angemeldete Konto
+// Admin ist – sonst nur die eigene Zeile.
+export async function listUsers() {
+  if (!isCloudConfigured) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getSession() {
   if (!isCloudConfigured) return null;
   const { data } = await supabase.auth.getSession();

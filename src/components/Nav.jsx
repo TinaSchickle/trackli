@@ -9,6 +9,7 @@ export const TABS = [
   { key: 'evaluation', label: 'Regeln', icon: '📖', access: 'public' },
   { key: 'rules', label: "So geht's", icon: '📋', access: 'public' },
   { key: 'appRules', label: 'App', icon: '⚙️', access: 'admin' },
+  { key: 'users', label: 'User', icon: '👥', access: 'admin' },
   { key: 'dashboard', label: 'Dashboard', icon: '📊', access: 'user' },
 ];
 
