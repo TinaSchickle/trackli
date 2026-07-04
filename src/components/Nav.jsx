@@ -1,4 +1,4 @@
-const TABS = [
+export const TABS = [
   { key: 'entry', label: 'Eintrag', icon: '✏️' },
   { key: 'calendar', label: 'Kalender', icon: '📅' },
   { key: 'status', label: 'Status', icon: '🔎' },

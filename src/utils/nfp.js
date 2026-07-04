@@ -702,6 +702,39 @@ function averageCycleLength(allCycles) {
 
 const FERNING_FULL = 'Vollständiges Farnkraut-Muster';
 
+// Typische Symptome je Zyklusphase (allgemeine Orientierung, keine Diagnose).
+const CYCLE_PHASES = {
+  menstruation: {
+    name: 'Menstruation',
+    symptoms: ['Unterleibskrämpfe', 'Müdigkeit / wenig Energie', 'Kopf- oder Rückenschmerzen'],
+  },
+  follicular: {
+    name: 'Follikelphase',
+    symptoms: ['Steigende Energie & Stimmung', 'Zunehmende Libido', 'Klareres Hautbild'],
+  },
+  ovulation: {
+    name: 'Eisprung-Phase',
+    symptoms: ['Mittelschmerz (einseitiges Ziehen)', 'Höchste Libido', 'Klarer, spinnbarer Schleim'],
+  },
+  luteal: {
+    name: 'Lutealphase',
+    symptoms: ['Brustspannen', 'Reizbarkeit / Stimmungstiefs', 'Blähungen & Heißhunger'],
+  },
+};
+
+// Erwarteter nächster Zyklusstart aus der durchschnittlichen Zykluslänge.
+// Solange keine echten (abgeschlossenen) Zyklen vorliegen: Standard 28 Tage –
+// diese 28 fließen NICHT in den Durchschnitt ein, sie sind nur Fallback.
+export function expectedNextStart(cycle, allCycles) {
+  if (!cycle) return null;
+  const avg = averageCycleLength(allCycles);
+  const len = avg ?? 28;
+  return {
+    date: addIsoDays(cycle.startDate, len),
+    basis: avg ? `Ø ${len} Tage` : 'Standard 28 Tage',
+  };
+}
+
 // Eisprung-Prognose aus Temperatur, Schleim, Muttermund und Spucke.
 function predictOvulation(cycle, allCycles, dateIso) {
   const ev = cycle.evaluation;
@@ -780,5 +813,21 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
       'Fruchtbare Phase – zum Verhüten schützen; für einen Kinderwunsch günstige Zeit.';
   }
 
-  return { cycleDay, phase, phaseLabel, phaseNote, ovulation };
+  // Physiologische Zyklusphase (für „typische Symptome").
+  let phaseKey;
+  if (cycleDay <= 5) phaseKey = 'menstruation';
+  else if (signToday || ovulation.kind === 'imminent' || inPeakWindow) phaseKey = 'ovulation';
+  else if ((ev?.complete && dateIso > ev.infertileFrom) || (dToOv != null && dToOv > 0)) phaseKey = 'luteal';
+  else phaseKey = 'follicular';
+  const cyclePhase = { key: phaseKey, ...CYCLE_PHASES[phaseKey] };
+
+  return {
+    cycleDay,
+    phase,
+    phaseLabel,
+    phaseNote,
+    ovulation,
+    cyclePhase,
+    nextStart: expectedNextStart(cycle, allCycles),
+  };
 }

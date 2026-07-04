@@ -126,6 +126,7 @@ export default function EntryForm({
   onSaved,
   pendingPeriodStart = false,
   onPendingConsumed,
+  onOpenGuide,
 }) {
   const activeDate = date ?? todayIso();
 
@@ -195,13 +196,17 @@ export default function EntryForm({
   // Schreibt ein Zyklus-weites Feld (Flags/Messart) auf den Starteintrag – oder
   // ins Formular, wenn wir am Starttag stehen bzw. noch kein Zyklus existiert.
   async function setCycleField(field, value) {
-    if (isStartDay || !cycle || !startEntry) {
-      update(field, value);
-      return;
+    const stored = cycle ? entryByDate.get(cycle.startDate) : null;
+    // Am Starttag (oder wenn noch kein Starteintrag gespeichert ist) im Formular
+    // halten, damit die Auswahl sofort reagiert und beim Speichern erhalten bleibt.
+    if (isStartDay || !stored) update(field, value);
+    // Zusätzlich sofort auf dem gespeicherten Starteintrag persistieren, damit
+    // Kalender und Auswertung unmittelbar reagieren (nicht erst beim Speichern).
+    if (stored) {
+      const updated = { ...stored, [field]: value };
+      await putEntry(updated);
+      onSaved?.(updated);
     }
-    const updated = { ...startEntry, [field]: value };
-    await putEntry(updated);
-    onSaved?.(updated);
   }
 
   // "Neuen Zyklus starten" aus dem Popup: Periodenbeginn vorbelegen.
@@ -296,6 +301,14 @@ export default function EntryForm({
               <span>Messart</span>
               <strong>{site}</strong>
             </div>
+            {forecast.nextStart && (
+              <div className="cib-row">
+                <span>Nächster Start (erwartet)</span>
+                <strong>
+                  {formatDateDe(forecast.nextStart.date)} · {forecast.nextStart.basis}
+                </strong>
+              </div>
+            )}
             <div className={`cib-fertility ${forecast.phase}`}>
               <span className="cib-badge">
                 {forecast.phaseLabel}
@@ -307,6 +320,14 @@ export default function EntryForm({
               <div className="cib-disclaimer">
                 * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der Messungen –
                 Softwarefehler vorbehalten, keine Haftung.
+              </div>
+            )}
+            {forecast.cyclePhase && (
+              <div className="cib-phase">
+                <span className="cib-phase-name">{forecast.cyclePhase.name}</span>
+                <span className="cib-phase-sym">
+                  Typische Symptome: {forecast.cyclePhase.symptoms.join(' · ')}
+                </span>
               </div>
             )}
           </>
@@ -353,7 +374,11 @@ export default function EntryForm({
 
       {/* ── Temperatur ─────────────────────────────────── */}
       <fieldset className={`module-block${tracks.temp ? '' : ' is-off'}`}>
-        <legend>Basaltemperatur</legend>
+        <legend>
+          <button type="button" className="module-guide-link" onClick={() => onOpenGuide?.('temp')}>
+            Basaltemperatur <span aria-hidden="true">↗</span>
+          </button>
+        </legend>
         <ModuleDisable id="disTemp" checked={!tracks.temp} onChange={(v) => setCycleField('trackTemp', !v)} />
 
         {!tracks.temp ? (
@@ -414,7 +439,11 @@ export default function EntryForm({
 
       {/* ── Zervixschleim ──────────────────────────────── */}
       <fieldset className={`module-block${tracks.mucus ? '' : ' is-off'}`}>
-        <legend>Zervixschleim</legend>
+        <legend>
+          <button type="button" className="module-guide-link" onClick={() => onOpenGuide?.('mucus')}>
+            Zervixschleim <span aria-hidden="true">↗</span>
+          </button>
+        </legend>
         <ModuleDisable id="disMucus" checked={!tracks.mucus} onChange={(v) => setCycleField('trackMucus', !v)} />
 
         {!tracks.mucus ? (
@@ -467,7 +496,11 @@ export default function EntryForm({
 
       {/* ── Muttermund ─────────────────────────────────── */}
       <fieldset className={`module-block${tracks.cervix ? '' : ' is-off'}`}>
-        <legend>Muttermund</legend>
+        <legend>
+          <button type="button" className="module-guide-link" onClick={() => onOpenGuide?.('cervix')}>
+            Muttermund <span aria-hidden="true">↗</span>
+          </button>
+        </legend>
         <ModuleDisable id="disCervix" checked={!tracks.cervix} onChange={(v) => setCycleField('trackCervix', !v)} />
 
         {!tracks.cervix ? (

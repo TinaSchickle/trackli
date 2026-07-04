@@ -11,8 +11,10 @@ import RulesTab from './components/RulesTab.jsx';
 import AppRulesTab from './components/AppRulesTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
-import Nav from './components/Nav.jsx';
+import Nav, { TABS } from './components/Nav.jsx';
 import { formatDateDe } from './utils/nfp.js';
+
+const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
 
 export default function App() {
   const [entries, setEntries] = useState([]);
@@ -22,6 +24,13 @@ export default function App() {
   const [showBackup, setShowBackup] = useState(false);
   const [ovDismissed, setOvDismissed] = useState(null);
   const [pendingPeriodStart, setPendingPeriodStart] = useState(false);
+  const [guideSign, setGuideSign] = useState(null);
+
+  // Deep-Link aus dem Eintrag-Tab zur passenden „So geht's“-Anleitung.
+  function openGuide(sign) {
+    setGuideSign(sign);
+    setTab('rules');
+  }
 
   useEffect(() => {
     getAllEntries().then((data) => {
@@ -77,7 +86,7 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="eyebrow">NFP · Sensiplan</div>
-        <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender</h1>
+        <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender · {TAB_LABELS[tab]}</h1>
       </header>
 
       <div className="screen">
@@ -90,6 +99,7 @@ export default function App() {
             onSaved={handleEntrySaved}
             pendingPeriodStart={pendingPeriodStart}
             onPendingConsumed={() => setPendingPeriodStart(false)}
+            onOpenGuide={openGuide}
           />
         )}
         {tab === 'calendar' && (
@@ -104,7 +114,7 @@ export default function App() {
         )}
         {tab === 'status' && <StatusTab cycle={currentCycle} />}
         {tab === 'evaluation' && <EvaluationTab />}
-        {tab === 'rules' && <RulesTab />}
+        {tab === 'rules' && <RulesTab initialSign={guideSign} />}
         {tab === 'appRules' && <AppRulesTab />}
         {tab === 'dashboard' && <Dashboard cycles={cycles} />}
       </div>
