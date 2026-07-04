@@ -7,6 +7,11 @@
 -- JSON in "data", "updated_at" (ms seit 1970) entscheidet beim Abgleich, welche
 -- Version gewinnt. "deleted" markiert Löschungen (Tombstone), damit sie auf
 -- andere Geräte übertragen werden.
+--
+-- Voraussetzung: In den Projekt-API-Einstellungen ist "Automatically expose
+-- new tables" AUS (empfohlener Sicherheits-Default von Supabase). Deshalb
+-- vergibt dieses Skript die Tabellenrechte unten explizit selbst, statt sich
+-- auf die automatische Freigabe zu verlassen.
 
 -- ── Einträge (Tagesdaten) ────────────────────────────────────────────────────
 create table if not exists public.entries (
@@ -27,6 +32,11 @@ create policy "entries sind privat"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Tabellenzugriff für eingeloggte Nutzer freischalten (nötig, da "Automatically
+-- expose new tables" ausgeschaltet ist). Welche Zeilen sichtbar sind, regelt
+-- weiterhin allein die RLS-Policy oben.
+grant select, insert, update, delete on public.entries to authenticated;
+
 -- ── Archivierte Zyklus-Charts ────────────────────────────────────────────────
 create table if not exists public.archived_charts (
   user_id     uuid   not null references auth.users (id) on delete cascade,
@@ -45,3 +55,5 @@ create policy "charts sind privat"
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.archived_charts to authenticated;
