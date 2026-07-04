@@ -20,7 +20,7 @@ export default function OvulationModal({ infertileFrom, method, onKeepLogging, o
             Weiter Werte eintragen
           </button>
           <button type="button" className="btn-primary" onClick={onFinish}>
-            Zykluskalender abschließen
+            Diesen Zyklus abschließen
           </button>
         </div>
       </div>
