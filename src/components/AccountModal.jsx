@@ -18,7 +18,6 @@ export default function AccountModal({
   syncing,
   lastSyncAt,
   syncError,
-  onSyncNow,
   onClose,
 }) {
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
@@ -98,26 +97,13 @@ export default function AccountModal({
                     : 'Noch nicht synchronisiert.'}
             </div>
             <button
-              className="btn-primary"
-              onClick={onSyncNow}
-              disabled={syncing}
-              style={{ marginBottom: 10 }}
-            >
-              Jetzt synchronisieren
-            </button>
-            <button
               className="btn-secondary"
               onClick={handleSignOut}
               disabled={busy}
-              style={{ width: '100%', marginBottom: 10 }}
+              style={{ width: '100%' }}
             >
               Abmelden
             </button>
-            <p style={{ fontSize: '0.78rem', color: 'var(--color-text-soft)' }}>
-              Beim Abmelden werden die lokalen Daten auf diesem Gerät entfernt.
-              Sie bleiben in der Cloud gespeichert und stehen nach der nächsten
-              Anmeldung wieder zur Verfügung.
-            </p>
           </>
         )}
 

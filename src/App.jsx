@@ -292,7 +292,6 @@ export default function App() {
           syncing={syncing}
           lastSyncAt={lastSyncAt}
           syncError={syncError}
-          onSyncNow={runSync}
           onClose={() => setShowAccount(false)}
         />
       )}
