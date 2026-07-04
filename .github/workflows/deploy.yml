@@ -39,7 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url }}
     steps:
+      # Bei schnell aufeinanderfolgenden Pushes lehnt das GitHub-Pages-Backend
+      # ein Deployment gelegentlich mit "Deployment failed, try again later."
+      # ab, weil das vorherige Deployment intern noch nicht abgeschlossen ist.
+      # Deshalb: erster Versuch darf scheitern, kurz warten, dann erneut.
       - id: deployment
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - name: Warte vor erneutem Deploy-Versuch
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+      - id: deployment-retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v5
