@@ -1,4 +1,8 @@
-const CACHE_NAME = 'zykluskalender-v1';
+// Der Platzhalter im Cache-Namen wird beim Prod-Build durch eine eindeutige
+// ID ersetzt (siehe vite.config.js). Dadurch bekommt jeder Build einen neuen
+// Cache-Namen, der alte Cache wird beim activate gelöscht und die App zieht
+// die neuen Assets.
+const CACHE_NAME = 'zykluskalender-__BUILD_ID__';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
