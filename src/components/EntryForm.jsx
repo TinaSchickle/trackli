@@ -363,7 +363,13 @@ export default function EntryForm({
             {forecast.cyclePhase && (
               <Popover
                 triggerClass="cib-phase-btn"
-                label={`${forecast.cyclePhase.name} – mögliche Symptome`}
+                label={
+                  <span className="cib-phase-label">
+                    {forecast.cyclePhase.name}
+                    <br />
+                    mögliche Symptome
+                  </span>
+                }
               >
                 <div className="cib-sym-group">
                   <strong>Mental</strong>
