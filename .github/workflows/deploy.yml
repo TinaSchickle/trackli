@@ -12,7 +12,10 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Deployments NICHT abbrechen, sondern in die Warteschlange stellen. Sonst
+  # lehnt das GitHub-Pages-Backend bei schnell aufeinanderfolgenden Pushes ein
+  # abgebrochenes Deployment mit "Deployment failed, try again later." ab.
+  cancel-in-progress: false
 
 jobs:
   build:
