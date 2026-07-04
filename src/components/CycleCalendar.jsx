@@ -414,31 +414,48 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
       )}
 
       {explanations.length > 0 && (
-        <div className="sheet-explanations">
-          {explanations.map((msg, i) => (
-            <p key={i}>ℹ️ {msg}</p>
-          ))}
-        </div>
+        <details className="sheet-details" open>
+          <summary>Erklärungen zur Auswertung ({explanations.length})</summary>
+          <div className="sheet-explanations">
+            {explanations.map((msg, i) => (
+              <p key={i}>{msg}</p>
+            ))}
+          </div>
+        </details>
       )}
 
-      <div className="sheet-legend">
-        <div>
-          Zervixschleim: t trocken · Ø nichts · f feucht · S feucht &amp; cremig ·
-          S+ spinnbar / glasig · H Höhepunkt · ¹²³ Tage danach
-        </div>
-        <div>
-          Muttermund: ● fest / zu · ◐ Übergang · ◯ weich / offen (grün = fruchtbar) ·
-          H Höhepunkt · ¹²³ Tage danach
-        </div>
-        <div>
-          Temperatur: ¹⁻⁶ tiefe Werte (Basis der Hilfslinie) · ¹⁻³ höhere Werte ·
-          4 = Zusatztag (Ausnahmeregel) · ✕ zählt nicht · grau = übersprungen/ausgeklammert
-        </div>
-        <div>
-          Spucke: <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
-          <FernIcon level={2} /> vollständiges Farnkraut-Muster
-        </div>
-      </div>
+      <details className="sheet-details">
+        <summary>Zeichenerklärung</summary>
+        <dl className="sheet-legend">
+          {tracks.mucus && (
+            <div>
+              <dt>Zervixschleim</dt>
+              <dd>t trocken · Ø nichts · f feucht · S feucht &amp; cremig · S+ spinnbar / glasig · H Höhepunkt · ¹²³ Tage danach</dd>
+            </div>
+          )}
+          {tracks.cervix && (
+            <div>
+              <dt>Muttermund</dt>
+              <dd>● fest / zu · ◐ Übergang · ◯ weich / offen (grün = fruchtbar) · H Höhepunkt · ¹²³ Tage danach</dd>
+            </div>
+          )}
+          {tracks.temp && (
+            <div>
+              <dt>Temperatur</dt>
+              <dd>¹⁻⁶ tiefe Werte · ¹⁻³ höhere Werte · 4 Zusatztag (Ausnahme) · ✕ zählt nicht · grau = übersprungen</dd>
+            </div>
+          )}
+          {tracks.ferning && (
+            <div>
+              <dt>Spucke</dt>
+              <dd>
+                <FernIcon level={0} /> kein · <FernIcon level={1} /> teilweises ·{' '}
+                <FernIcon level={2} /> vollständiges Muster
+              </dd>
+            </div>
+          )}
+        </dl>
+      </details>
     </div>
   );
 }

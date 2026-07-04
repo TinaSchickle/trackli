@@ -479,12 +479,55 @@ textarea:focus-visible {
   vertical-align: middle;
 }
 
-.sheet-legend {
+/* Aufklappbare Blöcke unter dem Zyklusblatt (Erklärungen & Legende) */
+.sheet-details {
   margin-top: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-muschel-light);
+  overflow: hidden;
+}
+
+.sheet-details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-ton-dark);
+}
+
+.sheet-details > summary::-webkit-details-marker { display: none; }
+
+.sheet-details > summary::before {
+  content: '▸';
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.sheet-details[open] > summary::before { transform: rotate(90deg); }
+.sheet-details[open] > summary { border-bottom: 1px solid var(--color-line); }
+
+.sheet-legend {
+  margin: 0;
+  padding: 8px 12px;
   font-size: 0.72rem;
   color: var(--color-text-soft);
-  line-height: 1.5;
+  line-height: 1.45;
 }
+
+.sheet-legend > div {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 8px;
+  padding: 3px 0;
+}
+.sheet-legend > div + div { border-top: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent); }
+.sheet-legend dt { font-weight: 700; color: var(--color-text); }
+.sheet-legend dd { margin: 0; }
 
 .fern-icon {
   display: inline-block;
@@ -1017,16 +1060,24 @@ textarea:focus-visible {
 }
 
 .sheet-explanations {
-  margin-top: 8px;
-  border-top: 1px solid var(--color-line);
-  padding-top: 8px;
+  padding: 8px 12px;
 }
 
 .sheet-explanations p {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
+  padding-left: 18px;
+  position: relative;
   font-size: 0.78rem;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--color-text-soft);
+}
+
+.sheet-explanations p:last-child { margin-bottom: 0; }
+.sheet-explanations p::before {
+  content: 'ℹ️';
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 /* ── Status-Tab ─────────────────────────────────────── */
