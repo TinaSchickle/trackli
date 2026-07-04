@@ -3,6 +3,16 @@ import { supabase, isCloudConfigured } from './supabase.js';
 // Dünne Hülle um Supabase-Auth, damit der Rest der App nichts über den
 // konkreten Anbieter wissen muss.
 
+// Administrator-Konten. Ein Admin sieht zusätzlich den „App"-Tab. Die Liste
+// steht bewusst im Frontend (keine Rechte-Vergabe, nur Sichtbarkeit von Tabs) –
+// die Datentrennung selbst regelt weiterhin die Row-Level-Security in Supabase.
+const ADMIN_EMAILS = ['tina.schickle@gmx.de'];
+
+export function isAdmin(user) {
+  const email = user?.email?.toLowerCase();
+  return Boolean(email && ADMIN_EMAILS.includes(email));
+}
+
 export async function getSession() {
   if (!isCloudConfigured) return null;
   const { data } = await supabase.auth.getSession();

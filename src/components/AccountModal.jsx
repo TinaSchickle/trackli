@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
-import { signIn, signUp, signOut } from '../cloud/auth.js';
+import { signIn, signUp, signOut, isAdmin } from '../cloud/auth.js';
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -78,7 +78,8 @@ export default function AccountModal({
         {isCloudConfigured && user && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
-              Angemeldet als <strong>{user.email}</strong>. Deine Daten werden
+              Angemeldet als <strong>{user.email}</strong>
+              {isAdmin(user) && ' (Administrator)'}. Deine Daten werden
               zwischen deinen Geräten synchronisiert.
             </p>
             <div
@@ -113,7 +114,9 @@ export default function AccountModal({
               Abmelden
             </button>
             <p style={{ fontSize: '0.78rem', color: 'var(--color-text-soft)' }}>
-              Abmelden löscht deine lokalen Einträge nicht.
+              Beim Abmelden werden die lokalen Daten auf diesem Gerät entfernt.
+              Sie bleiben in der Cloud gespeichert und stehen nach der nächsten
+              Anmeldung wieder zur Verfügung.
             </p>
           </>
         )}

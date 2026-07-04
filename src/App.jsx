@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getAllEntries, syncNow } from './db.js';
+import { getAllEntries, syncNow, prepareLocalDataForUser, releaseLocalData } from './db.js';
 import { isCloudConfigured } from './cloud/supabase.js';
-import { getUser, onAuthChange } from './cloud/auth.js';
+import { getUser, onAuthChange, isAdmin } from './cloud/auth.js';
 import { segmentIntoCycles } from './utils/cycles.js';
 import { todayIso } from './utils/dates.js';
 import EntryForm from './components/EntryForm.jsx';
@@ -14,7 +14,7 @@ import AppRulesTab from './components/AppRulesTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
 import AccountModal from './components/AccountModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
-import Nav, { TABS } from './components/Nav.jsx';
+import Nav, { TABS, visibleTabs } from './components/Nav.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -36,6 +36,9 @@ export default function App() {
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [syncError, setSyncError] = useState(null);
   const syncRunning = useRef(false);
+  // Vorheriger Anmeldezustand, um echtes Abmelden vom „noch nie angemeldet"-
+  // Start zu unterscheiden (nur beim echten Abmelden lokale Daten löschen).
+  const prevUserIdRef = useRef(undefined);
 
   async function reloadEntries() {
     const data = await getAllEntries();
@@ -81,10 +84,25 @@ export default function App() {
   useEffect(() => {
     if (!isCloudConfigured) return;
     getUser().then(setUser);
-    const unsub = onAuthChange((u) => {
+    const unsub = onAuthChange(async (u) => {
+      const prevId = prevUserIdRef.current;
+      prevUserIdRef.current = u?.id ?? null;
       setUser(u);
-      if (u) runSync();
-      else setLastSyncAt(null);
+      if (u) {
+        // Fremde lokale Daten (anderes Konto) vor dem Sync verwerfen; eigene
+        // bzw. herrenlose Alt-Daten werden übernommen.
+        await prepareLocalDataForUser(u.id);
+        runSync();
+      } else {
+        // Nur beim echten Abmelden (vorher war jemand angemeldet) lokale Daten
+        // löschen – nicht beim initialen „noch nie angemeldet"-Zustand, dessen
+        // Daten bei der ersten Anmeldung noch übernommen werden sollen.
+        if (prevId) {
+          await releaseLocalData();
+          await reloadEntries();
+        }
+        setLastSyncAt(null);
+      }
     });
     return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,10 +123,19 @@ export default function App() {
   const cycles = useMemo(() => segmentIntoCycles(entries), [entries]);
   const currentCycle = cycles.find((c) => c.isCurrent);
 
+  // Zugriffsrechte. Ist die Cloud gar nicht eingerichtet, ist keine Anmeldung
+  // möglich – dann läuft alles wie bisher rein lokal mit vollem Zugriff.
+  const authed = !isCloudConfigured || !!user;
+  const admin = !isCloudConfigured || isAdmin(user);
+  const tabs = useMemo(() => visibleTabs({ authed, admin }), [authed, admin]);
+  // Der aktive Tab muss immer erlaubt sein. Wechselt der Anmeldezustand und der
+  // bisherige Tab ist nicht mehr sichtbar, auf einen Standard zurückfallen.
+  const activeTab = tabs.some((t) => t.key === tab) ? tab : authed ? 'entry' : 'rules';
+
   // Eisprung-Popup: sobald die doppelte Kontrolle des aktuellen Zyklus erfüllt
   // ist und der Nutzer im Eintrag-Tab ist (einmalig pro Zyklus, bis verworfen).
   const showOvModal =
-    tab === 'entry' &&
+    activeTab === 'entry' &&
     !!currentCycle?.evaluation?.complete &&
     ovDismissed !== currentCycle.id;
 
@@ -153,7 +180,7 @@ export default function App() {
       >
         <div>
           <div className="eyebrow">NFP · Sensiplan</div>
-          <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender · {TAB_LABELS[tab]}</h1>
+          <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender · {TAB_LABELS[activeTab]}</h1>
         </div>
         <button
           onClick={() => setShowAccount(true)}
@@ -202,7 +229,29 @@ export default function App() {
       </header>
 
       <div className="screen">
-        {tab === 'entry' && (
+        {isCloudConfigured && !user && (
+          <button
+            type="button"
+            onClick={() => setShowAccount(true)}
+            className="card"
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              marginBottom: 16,
+              cursor: 'pointer',
+              border: '1px solid var(--color-border, #e0d7d0)',
+              background: 'var(--color-surface, #fff)',
+            }}
+          >
+            <strong>Anmelden für deinen Zyklus</strong>
+            <div style={{ color: 'var(--color-text-soft)', fontSize: '0.9rem', marginTop: 4 }}>
+              Melde dich an, um Eintrag, Kalender, Status und Dashboard zu sehen.
+              Ohne Anmeldung sind nur „So geht's" und „Regeln" verfügbar.
+            </div>
+          </button>
+        )}
+        {activeTab === 'entry' && (
           <EntryForm
             entries={entries}
             cycles={cycles}
@@ -214,7 +263,7 @@ export default function App() {
             onOpenGuide={openGuide}
           />
         )}
-        {tab === 'calendar' && (
+        {activeTab === 'calendar' && (
           <CycleCalendar
             cycles={cycles}
             entries={entries}
@@ -224,14 +273,14 @@ export default function App() {
             }}
           />
         )}
-        {tab === 'status' && <StatusTab cycle={currentCycle} />}
-        {tab === 'evaluation' && <EvaluationTab />}
-        {tab === 'rules' && <RulesTab initialSign={guideSign} />}
-        {tab === 'appRules' && <AppRulesTab />}
-        {tab === 'dashboard' && <Dashboard cycles={cycles} />}
+        {activeTab === 'status' && <StatusTab cycle={currentCycle} />}
+        {activeTab === 'evaluation' && <EvaluationTab />}
+        {activeTab === 'rules' && <RulesTab initialSign={guideSign} />}
+        {activeTab === 'appRules' && <AppRulesTab />}
+        {activeTab === 'dashboard' && <Dashboard cycles={cycles} />}
       </div>
 
-      <Nav active={tab} onChange={setTab} />
+      <Nav tabs={tabs} active={activeTab} onChange={setTab} />
 
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
 

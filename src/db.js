@@ -59,6 +59,54 @@ async function localDelete(storeName, id) {
   });
 }
 
+async function localClear(storeName) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const req = tx(db, storeName, 'readwrite').clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ── Lokale Datentrennung zwischen Konten ─────────────────────────────────────
+// Die lokale IndexedDB liegt pro Browser vor und gehört immer genau einem
+// angemeldeten Konto. Diese Marke merkt sich, wem die aktuellen lokalen Daten
+// gehören, damit beim Wechsel des Kontos keine fremden Einträge sichtbar werden
+// oder versehentlich in ein anderes Konto hochgeladen werden.
+const LOCAL_OWNER_KEY = 'trackli:localDataOwner';
+
+// Alle lokalen Daten löschen (Einträge + Charts). Die Cloud bleibt unberührt.
+export async function clearLocalData() {
+  await Promise.all([localClear(STORE_ENTRIES), localClear(STORE_ARCHIVED_CHARTS)]);
+}
+
+// Vor dem Sync aufrufen: Gehören die lokalen Daten einem *anderen* Konto,
+// werden sie verworfen, bevor die Daten des jetzt angemeldeten Kontos aus der
+// Cloud geladen werden. Sind die lokalen Daten „herrenlos" (Alt-/Offline-Daten
+// von vor der Anmeldung), werden sie dem jetzigen Konto zugeordnet und beim Sync
+// übernommen.
+export async function prepareLocalDataForUser(userId) {
+  try {
+    const owner = localStorage.getItem(LOCAL_OWNER_KEY);
+    if (owner && owner !== userId) {
+      await clearLocalData();
+    }
+    localStorage.setItem(LOCAL_OWNER_KEY, userId);
+  } catch {
+    /* localStorage nicht verfügbar – ohne Trennung best effort weiter */
+  }
+}
+
+// Beim Abmelden aufrufen: lokale Daten entfernen und die Besitzer-Marke lösen.
+export async function releaseLocalData() {
+  try {
+    localStorage.removeItem(LOCAL_OWNER_KEY);
+  } catch {
+    /* ignorieren */
+  }
+  await clearLocalData();
+}
+
 // ── Cloud-Hilfen ───────────────────────────────────────────────────────────
 
 // Liefert die user_id, wenn Cloud eingerichtet, online und angemeldet – sonst
