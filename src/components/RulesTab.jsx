@@ -1,4 +1,4 @@
-// Mess-Anleitung „How To“ (Sektion 4 der drei NFP-Module) als nachlesbare Referenz.
+// Mess-Anleitung „So geht's“ (Sektion 4 der drei NFP-Module) als nachlesbare Referenz.
 
 import { useState } from 'react';
 import SignSwitch, { SIGN_OPTIONS } from './SignSwitch.jsx';

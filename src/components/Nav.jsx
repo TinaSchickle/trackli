@@ -3,7 +3,7 @@ const TABS = [
   { key: 'calendar', label: 'Kalender', icon: '📅' },
   { key: 'status', label: 'Status', icon: '🔎' },
   { key: 'evaluation', label: 'Regeln', icon: '📖' },
-  { key: 'rules', label: 'How To', icon: '📋' },
+  { key: 'rules', label: "So geht's", icon: '📋' },
   { key: 'appRules', label: 'App', icon: '⚙️' },
   { key: 'dashboard', label: 'Dashboard', icon: '📊' },
 ];
