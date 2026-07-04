@@ -227,8 +227,23 @@ export default function App() {
             padding: user ? '6px 12px 6px 10px' : '6px 10px',
           }}
         >
-          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{syncing ? '🔄' : '👤'}</span>
-          {user ? 'Konto' : 'Anmelden'}
+          <span style={{ display: 'inline-flex', lineHeight: 1 }} aria-hidden="true">
+            {syncing ? (
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🔄</span>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+                style={{ display: 'block' }}
+              >
+                <circle cx="12" cy="4.2" r="2.3" />
+                <path d="M12 7c-1.3 0-2.4.8-2.8 2L6.3 17h3.2v4h1.5v-4h2v4h1.5v-4h3.2l-2.9-8c-.4-1.2-1.5-2-2.8-2z" />
+              </svg>
+            )}
+          </span>
+          {user ? null : 'Anmelden'}
           {user && !syncing && (
             <span
               aria-hidden="true"

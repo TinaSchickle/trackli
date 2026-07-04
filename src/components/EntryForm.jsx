@@ -332,11 +332,28 @@ export default function EntryForm({
               <span>Messart</span>
               <strong>{site}</strong>
             </div>
+            {forecast.cyclePhase && (
+              <div className="cib-row">
+                <span>Aktuelle Phase</span>
+                <strong>{forecast.cyclePhase.name}</strong>
+              </div>
+            )}
             {forecast.nextStart && (
               <div className="cib-row">
                 <span>Nächster Start (erwartet)</span>
+                <strong>{formatDateDe(forecast.nextStart.date)}</strong>
+              </div>
+            )}
+            {forecast.ovulation?.date && (
+              <div className="cib-row">
+                <span>
+                  {forecast.ovulation.kind === 'detected'
+                    ? 'Eisprung (bestätigt)'
+                    : 'Erwarteter Eisprung'}
+                </span>
                 <strong>
-                  {formatDateDe(forecast.nextStart.date)} · {forecast.nextStart.basis}
+                  {formatDateDe(forecast.ovulation.date)}
+                  {forecast.ovulation.day ? ` · Zyklustag ${forecast.ovulation.day}` : ''}
                 </strong>
               </div>
             )}
@@ -351,7 +368,28 @@ export default function EntryForm({
                   </>
                 }
               >
-                <p className="cib-note">{forecast.phaseNote} {forecast.ovulation.text}</p>
+                <p className="cib-note">{forecast.phaseNote}</p>
+                {forecast.cyclePhase && (
+                  <div className="cib-symptoms">
+                    <p className="cib-sym-title">Mögliche Symptome</p>
+                    <div className="cib-sym-group">
+                      <strong>Mental</strong>
+                      <ul>
+                        {forecast.cyclePhase.mental.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="cib-sym-group">
+                      <strong>Körperlich</strong>
+                      <ul>
+                        {forecast.cyclePhase.physical.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
                 {forecast.phase === 'infertile' && (
                   <p className="cib-disclaimer">
                     * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der
@@ -360,35 +398,6 @@ export default function EntryForm({
                 )}
               </Popover>
             </div>
-            {forecast.cyclePhase && (
-              <Popover
-                triggerClass="cib-phase-btn"
-                label={
-                  <span className="cib-phase-label">
-                    {forecast.cyclePhase.name}
-                    <br />
-                    mögliche Symptome
-                  </span>
-                }
-              >
-                <div className="cib-sym-group">
-                  <strong>Mental</strong>
-                  <ul>
-                    {forecast.cyclePhase.mental.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="cib-sym-group">
-                  <strong>Körperlich</strong>
-                  <ul>
-                    {forecast.cyclePhase.physical.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ul>
-                </div>
-              </Popover>
-            )}
           </>
         ) : (
           <div className="cib-empty">

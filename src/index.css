@@ -879,24 +879,18 @@ textarea:focus-visible {
   opacity: 0.9;
 }
 
-/* Symptom-Button + Popover-Inhalt */
-.cib-phase-btn {
-  margin-top: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border: 1px dashed var(--color-line);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-ton-dark);
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Symptom-Block innerhalb des Fruchtbarkeits-Popovers */
+.cib-symptoms {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-line);
 }
-.cib-phase-btn::after { content: '⌄'; font-weight: 700; opacity: 0.8; }
-.cib-phase-label { text-align: center; line-height: 1.25; }
+.cib-sym-title {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-ton-dark);
+}
 
 .cib-sym-group { margin-bottom: 9px; }
 .cib-sym-group:last-child { margin-bottom: 0; }
