@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { putEntry } from '../db.js';
 import { shiftIso, todayIso, parseIso } from '../utils/dates.js';
 import {
@@ -95,6 +95,33 @@ function Segmented({ options, value, onChange, disabled }) {
 
 function LockedNote({ children }) {
   return <p className="locked-note">🔒 {children}</p>;
+}
+
+// Klick-Popover: zeigt Details erst auf Klick, schließt bei Klick daneben.
+function Popover({ label, triggerClass = '', panelClass = '', children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  return (
+    <span className="popover-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`popover-trigger ${triggerClass}`}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {label}
+      </button>
+      {open && <div className={`popover-panel ${panelClass}`}>{children}</div>}
+    </span>
+  );
 }
 
 // "Für diesen Zyklus deaktivieren" – blendet das Zeichen aus Auswertung & Kalender aus.
@@ -314,25 +341,47 @@ export default function EntryForm({
               </div>
             )}
             <div className={`cib-fertility ${forecast.phase}`}>
-              <span className="cib-badge">
-                {forecast.phaseLabel}
-                {forecast.phase === 'infertile' ? '*' : ''}
-              </span>
-              <span className="cib-note">{forecast.phaseNote} {forecast.ovulation.text}</span>
+              <Popover
+                triggerClass="cib-badge cib-badge-btn"
+                panelClass="cib-fert-panel"
+                label={
+                  <>
+                    {forecast.phaseLabel}
+                    {forecast.phase === 'infertile' ? '*' : ''}
+                  </>
+                }
+              >
+                <p className="cib-note">{forecast.phaseNote} {forecast.ovulation.text}</p>
+                {forecast.phase === 'infertile' && (
+                  <p className="cib-disclaimer">
+                    * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der
+                    Messungen – Softwarefehler vorbehalten, keine Haftung.
+                  </p>
+                )}
+              </Popover>
             </div>
-            {forecast.phase === 'infertile' && (
-              <div className="cib-disclaimer">
-                * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der Messungen –
-                Softwarefehler vorbehalten, keine Haftung.
-              </div>
-            )}
             {forecast.cyclePhase && (
-              <div className="cib-phase">
-                <span className="cib-phase-name">{forecast.cyclePhase.name}</span>
-                <span className="cib-phase-sym">
-                  Typische Symptome: {forecast.cyclePhase.symptoms.join(' · ')}
-                </span>
-              </div>
+              <Popover
+                triggerClass="cib-phase-btn"
+                label={`${forecast.cyclePhase.name} – mögliche Symptome`}
+              >
+                <div className="cib-sym-group">
+                  <strong>Mental</strong>
+                  <ul>
+                    {forecast.cyclePhase.mental.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="cib-sym-group">
+                  <strong>Körperlich</strong>
+                  <ul>
+                    {forecast.cyclePhase.physical.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              </Popover>
             )}
           </>
         ) : (

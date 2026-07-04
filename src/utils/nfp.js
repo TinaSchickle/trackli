@@ -702,23 +702,28 @@ function averageCycleLength(allCycles) {
 
 const FERNING_FULL = 'Vollständiges Farnkraut-Muster';
 
-// Typische Symptome je Zyklusphase (allgemeine Orientierung, keine Diagnose).
+// Typische Symptome je Zyklusphase – je 3 mentale (Stimmung/Gemüt) und 3
+// körperliche (allgemeine Orientierung, keine Diagnose).
 const CYCLE_PHASES = {
   menstruation: {
     name: 'Menstruation',
-    symptoms: ['Unterleibskrämpfe', 'Müdigkeit / wenig Energie', 'Kopf- oder Rückenschmerzen'],
+    mental: ['Gedrückte / melancholische Stimmung', 'Reizbarkeit', 'Bedürfnis nach Ruhe & Rückzug'],
+    physical: ['Unterleibskrämpfe', 'Müdigkeit / wenig Energie', 'Kopf- oder Rückenschmerzen'],
   },
   follicular: {
     name: 'Follikelphase',
-    symptoms: ['Steigende Energie & Stimmung', 'Zunehmende Libido', 'Klareres Hautbild'],
+    mental: ['Offene, steigende Stimmung', 'Mehr Motivation & Fokus', 'Wachsende Geselligkeit'],
+    physical: ['Steigende Energie', 'Klareres Hautbild', 'Zunehmende Libido'],
   },
   ovulation: {
     name: 'Eisprung-Phase',
-    symptoms: ['Mittelschmerz (einseitiges Ziehen)', 'Höchste Libido', 'Klarer, spinnbarer Schleim'],
+    mental: ['Selbstbewusst & kommunikativ', 'Höchste Lust / Libido', 'Positive Grundstimmung'],
+    physical: ['Mittelschmerz (einseitiges Ziehen)', 'Klarer, spinnbarer Schleim', 'Empfindlichere Brüste'],
   },
   luteal: {
     name: 'Lutealphase',
-    symptoms: ['Brustspannen', 'Reizbarkeit / Stimmungstiefs', 'Blähungen & Heißhunger'],
+    mental: ['Stimmungsschwankungen / PMS', 'Reizbarkeit & Anspannung', 'Erhöhtes Ruhebedürfnis'],
+    physical: ['Brustspannen', 'Blähungen & Wassereinlagerung', 'Heißhunger'],
   },
 };
 
