@@ -99,6 +99,10 @@ export default function App() {
       prevUserIdRef.current = u?.id ?? null;
       setUser(u);
       if (u) {
+        // Nach erfolgreicher Anmeldung den Konto-Dialog automatisch schließen,
+        // damit er nicht ungefragt offen bleibt. Beim Passwort-Zurücksetzen
+        // (PASSWORD_RECOVERY) bleibt er offen, weil dort noch etwas zu tun ist.
+        if (event !== 'PASSWORD_RECOVERY') setShowAccount(false);
         // Fremde lokale Daten (anderes Konto) vor dem Sync verwerfen; eigene
         // bzw. herrenlose Alt-Daten werden übernommen.
         await prepareLocalDataForUser(u.id);
@@ -189,49 +193,39 @@ export default function App() {
         style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}
       >
         <div>
-          <div className="eyebrow">NFP · Sensiplan</div>
+          <div className="eyebrow">NFP nach Sensiplan</div>
           <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender · {TAB_LABELS[activeTab]}</h1>
         </div>
         <button
           onClick={() => setShowAccount(true)}
-          title={user ? `Angemeldet: ${user.email}` : 'Konto & Sync'}
-          aria-label="Konto und Synchronisierung"
+          title={user ? `Angemeldet: ${user.email} · Konto & Abmelden` : 'Anmelden · Konto & Sync'}
+          aria-label={user ? 'Konto – angemeldet, hier abmelden' : 'Anmelden'}
           style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '1.4rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: user ? 'var(--color-rauchblau-dark)' : 'transparent',
+            color: user ? '#fff' : 'inherit',
+            border: user ? 'none' : '1px solid var(--color-border, #e0d7d0)',
+            borderRadius: 999,
+            fontSize: '0.9rem',
+            fontWeight: 600,
             lineHeight: 1,
             cursor: 'pointer',
             position: 'relative',
-            padding: 4,
+            padding: user ? '6px 12px 6px 10px' : '6px 10px',
           }}
         >
-          {syncing ? '🔄' : user ? '☁️' : '👤'}
-          {user && !syncing && !syncError && (
+          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{syncing ? '🔄' : '👤'}</span>
+          {user ? 'Konto' : 'Anmelden'}
+          {user && !syncing && (
             <span
               aria-hidden="true"
               style={{
-                position: 'absolute',
-                right: 2,
-                bottom: 2,
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                background: '#2e7d32',
-              }}
-            />
-          )}
-          {syncError && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                right: 2,
-                bottom: 2,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#b3261e',
+                background: syncError ? '#b3261e' : '#7ddf9b',
               }}
             />
           )}
