@@ -585,9 +585,13 @@ export default function EntryForm({
                 onChange={(v) => update('cervixState', v)}
               />
               <p className="field-hint">
-                <strong>fest / zu</strong> = hart, geschlossen, tief (wie Nasenspitze) ·
-                <strong> weich / offen</strong> = weich, offen, hoch (wie Ohrläppchen). Je
-                weicher/offener/höher, desto fruchtbarer.
+                <strong>fest / zu / nah</strong> = hart wie Nasenspitze, Muttermund
+                Löchlein geschlossen, nah am Scheideneingang
+                <br />
+                <strong>weich / offen / tief</strong> = weich (wie Ohrläppchen),
+                Muttermund Löchlein offen, tief/schwer erreichbar
+                <br />
+                Je weicher/offener/höher, desto fruchtbarer.
               </p>
             </div>
 
