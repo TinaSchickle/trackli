@@ -1,3 +1,8 @@
 node_modules
 dist
 .DS_Store
+
+# Lokale Cloud-Zugangsdaten (nicht committen)
+.env
+.env.local
+.env.*.local

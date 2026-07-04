@@ -1,0 +1,36 @@
+name: Supabase wachhalten
+
+# Der kostenlose Supabase-Tarif pausiert ein Projekt nach 7 Tagen ohne
+# Aktivität. Dieser Job tippt die Datenbank alle 3 Tage einmal an, damit sie
+# nie einschläft – auch wenn du in der Hochlage tagelang nichts einträgst.
+# Läuft auf GitHubs Servern, völlig unabhängig von deinen Geräten.
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *' # alle 3 Tage um 06:17 UTC
+  workflow_dispatch: # erlaubt manuelles Auslösen zum Testen
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Datenbank antippen
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Supabase-Secrets nicht gesetzt – übersprungen."
+            exit 0
+          fi
+          # Eine leichte REST-Anfrage genügt als Aktivität. Row-Level-Security
+          # gibt ohne Login 0 Zeilen zurück – die Anfrage selbst zählt trotzdem.
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/entries?select=date&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+          echo "HTTP $code"
+          # 200 (leere Liste) oder 401/403 (RLS) heißt: Projekt ist wach.
+          if [ "$code" -ge 500 ]; then
+            echo "Server-Fehler – Projekt evtl. pausiert."
+            exit 1
+          fi
