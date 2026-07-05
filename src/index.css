@@ -1032,6 +1032,14 @@ textarea:focus-visible {
 .period-toggle small { display: block; line-height: 1.35; }
 .period-toggle small:last-child { color: var(--color-text-soft); }
 
+/* Dezenter Hinweis statt Speichern-Button – Einträge speichern automatisch */
+.autosave-hint {
+  text-align: center;
+  color: var(--color-text-soft);
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
 /* Dezente, kompakte Messart-Auswahl – Label und Auswahl in einer Zeile */
 .messart-row {
   margin-top: 8px;

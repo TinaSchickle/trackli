@@ -169,15 +169,69 @@ export default function EntryForm({
   );
   const [saved, setSaved] = useState(false);
 
+  // ── Automatisches Speichern ───────────────────────────────────────────────
+  // Es gibt keinen Speichern-Button mehr: Jede Änderung wird kurz gebündelt
+  // (Debounce) und dann persistiert. Beim Tageswechsel / Verlassen des Tabs
+  // werden noch offene Änderungen vorher rausgeschrieben.
+  const formRef = useRef(form);
+  formRef.current = form; // immer den aktuellsten Formularstand für den Timer bereithalten
+  const saveTimer = useRef(null);
+  const dirtyRef = useRef(false); // true = es gibt ungespeicherte Änderungen
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  function buildToSave(f) {
+    return {
+      ...f,
+      temperature:
+        f.temperature === '' || f.temperature == null ? null : Number(f.temperature),
+      tempSite: f.tempSite ?? 'oral',
+      cervicalMucus: f.cervicalMucus || null,
+      cervixState: f.cervixState || null,
+      ferning: f.ferning || null,
+    };
+  }
+
+  // Offene Änderung sofort rausschreiben (auch aus Cleanups heraus aufrufbar).
+  // putEntry schreibt zuerst lokal und versucht dann best-effort die Cloud –
+  // der Cloud-Teil kann hängen (z. B. abgemeldet), darauf warten wir für die
+  // Anzeige bewusst nicht: sobald lokal gespeichert ist, gilt es als gesichert.
+  function persist() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    const toSave = buildToSave(formRef.current);
+    putEntry(toSave);
+    if (mountedRef.current) setSaved(true);
+    onSaved?.(toSave);
+  }
+
+  // Nach einer Änderung ein verzögertes Speichern planen.
+  function scheduleSave() {
+    dirtyRef.current = true;
+    setSaved(false);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(persist, 700);
+  }
+
   // Beim Datumswechsel die Werte des gewählten Tages laden (oder leeres Formular).
-  // Ist noch kein Zyklus getrackt, wird der Periodenbeginn automatisch aktiviert.
+  // Gehört der Tag noch zu keinem Zyklus, wird der Periodenbeginn vorbelegt.
   useEffect(() => {
     const existing = entryByDate.get(activeDate);
     const loaded = existing ?? emptyEntry(activeDate);
-    if (!existing && cycles.length === 0) loaded.isPeriodStart = true;
+    if (!existing && !findCycleForDate(cycles, activeDate)) loaded.isPeriodStart = true;
     setForm(loaded);
     setTempParts(splitTemp(loaded.temperature));
     setSaved(false);
+    dirtyRef.current = false; // frisch geladen – nichts zu speichern
+    // Vor dem nächsten Datumswechsel (und beim Unmount) offene Änderungen sichern.
+    return () => { persist(); };
     // entryByDate absichtlich nicht als Dependency: lokale, noch ungespeicherte
     // Änderungen sollen beim Speichern anderer Einträge nicht verworfen werden.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -273,8 +327,16 @@ export default function EntryForm({
   }
 
   function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
-    setSaved(false);
+    setForm((f) => {
+      const next = { ...f, [field]: value };
+      // Trägt man an einem Tag ohne Zyklus etwas ein, wird automatisch der
+      // Periodenbeginn gesetzt (Tag 1) und damit ein neuer Zyklus gestartet.
+      if (!cycle && field !== 'isPeriodStart' && !next.isPeriodStart) {
+        next.isPeriodStart = true;
+      }
+      return next;
+    });
+    scheduleSave();
   }
 
   // Nachkomma leer = keine Messung; erst mit Nachkommawert entsteht eine Temperatur.
@@ -286,49 +348,37 @@ export default function EntryForm({
     );
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    const toSave = {
-      ...form,
-      temperature:
-        form.temperature === '' || form.temperature == null
-          ? null
-          : Number(form.temperature),
-      tempSite: form.tempSite ?? 'oral',
-      cervicalMucus: form.cervicalMucus || null,
-      cervixState: form.cervixState || null,
-      ferning: form.ferning || null,
-    };
-
-    // Neuer Zyklus, während der aktuelle noch nicht abgeschlossen ist:
-    // Sicherheitsabfrage – außer es liegen bereits ≥ 20 Tage seit Zyklusstart.
-    if (toSave.isPeriodStart) {
+  // Periodenbeginn-Haken umschalten. Beim Aktivieren mitten in einem laufenden,
+  // noch nicht abgeschlossenen Zyklus (< 20 Tage) einmal sicherheitshalber
+  // nachfragen – danach übernimmt das automatische Speichern.
+  function togglePeriodStart() {
+    const next = !form.isPeriodStart;
+    if (next) {
       const prevCycle = cycles.find((c) => c.isCurrent);
-      const wasAlreadyStart = entryByDate.get(toSave.date)?.isPeriodStart;
-      const startsNewCycle = prevCycle && toSave.date > prevCycle.startDate;
+      const wasAlreadyStart = entryByDate.get(activeDate)?.isPeriodStart;
+      const startsNewCycle = prevCycle && activeDate > prevCycle.startDate;
       if (startsNewCycle && !wasAlreadyStart && !prevCycle.evaluation.complete) {
         const days = Math.round(
-          (parseIso(toSave.date) - parseIso(prevCycle.startDate)) / 86400000
+          (parseIso(activeDate) - parseIso(prevCycle.startDate)) / 86400000
         );
-        if (days < 20) {
-          const ok = window.confirm(
+        if (
+          days < 20 &&
+          !window.confirm(
             'Willst du wirklich einen neuen Zyklus starten? Dein aktueller Zyklus ' +
               'wird unterbrochen und abgespeichert.'
-          );
-          if (!ok) return;
+          )
+        ) {
+          return;
         }
       }
     }
-
-    await putEntry(toSave);
-    setSaved(true);
-    onSaved?.(toSave);
+    update('isPeriodStart', next);
   }
 
   const selectedMucus = form.cervicalMucus ? MUCUS[form.cervicalMucus] : null;
 
   return (
-    <form className="card" onSubmit={handleSubmit}>
+    <form className="card" onSubmit={(e) => e.preventDefault()}>
       {/* ── Info-Box: Zyklusstatus & Prognose (nicht interaktiv) ── */}
       <div className="cycle-info-box" role="status" aria-live="polite">
         <div className="cib-title">Aktueller Zyklus</div>
@@ -692,7 +742,7 @@ export default function EntryForm({
         <button
           type="button"
           className={`period-toggle${form.isPeriodStart ? ' active' : ''}`}
-          onClick={() => update('isPeriodStart', !form.isPeriodStart)}
+          onClick={togglePeriodStart}
           aria-pressed={form.isPeriodStart}
         >
           <span className="period-toggle-icon" aria-hidden="true">🩸</span>
@@ -715,9 +765,11 @@ export default function EntryForm({
         </div>
       </div>
 
-      <button type="submit" className="btn-primary">
-        {saved ? 'Gespeichert ✓' : 'Eintrag speichern'}
-      </button>
+      <p className="autosave-hint" role="status" aria-live="polite">
+        {saved
+          ? 'Automatisch gespeichert ✓'
+          : 'Änderungen werden automatisch gespeichert'}
+      </p>
     </form>
   );
 }
