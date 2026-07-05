@@ -194,6 +194,16 @@ export default function EntryForm({
     [cycle, cycles, activeDate]
   );
 
+  // Info-Box oben zeigt IMMER den tagesaktuellen Zyklusstatus – unabhängig davon,
+  // welches Datum unten im Eingabefeld gewählt ist.
+  const todayDate = todayIso();
+  const todayCycle = useMemo(() => findCycleForDate(cycles, todayDate), [cycles, todayDate]);
+  const todayForecast = useMemo(
+    () => (todayCycle ? fertilityForecast(todayCycle, cycles, todayDate) : null),
+    [todayCycle, cycles, todayDate]
+  );
+  const todaySite = cycleSite(todayCycle);
+
   const tempLocked =
     evaluation?.temperature.status === 'completed' &&
     activeDate > evaluation.temperature.completedDate;
@@ -322,61 +332,61 @@ export default function EntryForm({
       {/* ── Info-Box: Zyklusstatus & Prognose (nicht interaktiv) ── */}
       <div className="cycle-info-box" role="status" aria-live="polite">
         <div className="cib-title">Aktueller Zyklus</div>
-        {cycle && forecast ? (
+        {todayCycle && todayForecast ? (
           <>
             <div className="cib-row">
               <span>Zyklusstart</span>
-              <strong>{formatDateDe(cycle.startDate)} · Tag {forecast.cycleDay}</strong>
+              <strong>{formatDateDe(todayCycle.startDate)} · Tag {todayForecast.cycleDay}</strong>
             </div>
             <div className="cib-row">
               <span>Messart</span>
-              <strong>{site}</strong>
+              <strong>{todaySite}</strong>
             </div>
-            {forecast.cyclePhase && (
+            {todayForecast.cyclePhase && (
               <div className="cib-row">
                 <span>Aktuelle Phase</span>
-                <strong>{forecast.cyclePhase.name}</strong>
+                <strong>{todayForecast.cyclePhase.name}</strong>
               </div>
             )}
-            {forecast.nextStart && (
+            {todayForecast.nextStart && (
               <div className="cib-row">
                 <span>Nächster Start (erwartet)</span>
-                <strong>{formatDateDe(forecast.nextStart.date)}</strong>
+                <strong>{formatDateDe(todayForecast.nextStart.date)}</strong>
               </div>
             )}
-            {forecast.ovulation?.date && (
+            {todayForecast.ovulation?.date && (
               <div className="cib-row">
                 <span>
-                  {forecast.ovulation.kind === 'detected'
+                  {todayForecast.ovulation.kind === 'detected'
                     ? 'Eisprung (bestätigt)'
                     : 'Erwarteter Eisprung'}
                 </span>
                 <strong>
-                  {formatDateDe(forecast.ovulation.date)}
+                  {formatDateDe(todayForecast.ovulation.date)}
                 </strong>
               </div>
             )}
-            <div className={`cib-fertility ${forecast.phase}`}>
+            <div className={`cib-fertility ${todayForecast.phase}`}>
               <Popover
                 triggerClass="cib-badge cib-badge-btn"
                 panelClass="cib-fert-panel"
                 label={
                   <>
-                    {forecast.phaseLabel}
-                    {forecast.phase === 'infertile' ? '*' : ''}
+                    {todayForecast.phaseLabel}
+                    {todayForecast.phase === 'infertile' ? '*' : ''}
                   </>
                 }
               >
-                <p className="cib-note">{forecast.phaseNote}</p>
-                {forecast.cyclePhase && (
+                <p className="cib-note">{todayForecast.phaseNote}</p>
+                {todayForecast.cyclePhase && (
                   <div className="cib-symptoms">
                     <p className="cib-sym-title">
-                      {forecast.cyclePhase.name} – Mögliche Symptome
+                      {todayForecast.cyclePhase.name} – Mögliche Symptome
                     </p>
                     <div className="cib-sym-group">
                       <strong>Mental</strong>
                       <ul>
-                        {forecast.cyclePhase.mental.map((s) => (
+                        {todayForecast.cyclePhase.mental.map((s) => (
                           <li key={s}>{s}</li>
                         ))}
                       </ul>
@@ -384,14 +394,14 @@ export default function EntryForm({
                     <div className="cib-sym-group">
                       <strong>Körperlich</strong>
                       <ul>
-                        {forecast.cyclePhase.physical.map((s) => (
+                        {todayForecast.cyclePhase.physical.map((s) => (
                           <li key={s}>{s}</li>
                         ))}
                       </ul>
                     </div>
                   </div>
                 )}
-                {forecast.phase === 'infertile' && (
+                {todayForecast.phase === 'infertile' && (
                   <p className="cib-disclaimer">
                     * Mit hoher Wahrscheinlichkeit bei korrekter Durchführung der
                     Messungen – Softwarefehler vorbehalten, keine Haftung.
@@ -438,6 +448,14 @@ export default function EntryForm({
         </div>
         {cycleDay != null && cycleDay >= 1 && (
           <p className="field-hint">Zyklustag {cycleDay}</p>
+        )}
+        {forecast && (
+          <div className={`date-fertility cib-fertility ${forecast.phase}`}>
+            <span className="cib-badge">
+              {forecast.phaseLabel}
+              {forecast.phase === 'infertile' ? '*' : ''}
+            </span>
+          </div>
         )}
         {activeDate !== todayIso() && (
           <button

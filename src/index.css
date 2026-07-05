@@ -687,6 +687,11 @@ textarea:focus-visible {
   text-align: center;
 }
 
+/* Fruchtbarkeitsstatus des gewählten Datums (unter dem Datumsfeld) */
+.date-fertility {
+  margin-top: 8px;
+}
+
 .learning-hint {
   background: var(--color-muschel);
   border-radius: 8px;
