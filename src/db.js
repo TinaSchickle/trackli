@@ -239,7 +239,12 @@ export async function syncNow() {
   // — Einträge (Schlüssel: Datum) —
   const [localEntries, remoteRes] = await Promise.all([
     getAllEntries(),
-    supabase.from('entries').select('date, data, updated_at, deleted'),
+    // Explizit auf das eigene Konto filtern. Die RLS-Policy in Supabase macht
+    // dasselbe serverseitig – aber wir verlassen uns bewusst NICHT allein
+    // darauf: Ist die RLS auf dem Projekt (versehentlich) nicht aktiv, würde
+    // ein ungefiltertes select fremde Zeilen liefern. Dieser Filter garantiert
+    // die Konto-Trennung auch dann. Kein Leaking.
+    supabase.from('entries').select('date, data, updated_at, deleted').eq('user_id', uid),
   ]);
   if (remoteRes.error) throw remoteRes.error;
 
@@ -296,7 +301,9 @@ export async function syncNow() {
   // — Archivierte Charts (Schlüssel: id) —
   const [localCharts, remoteChartsRes] = await Promise.all([
     getAllArchivedCharts(),
-    supabase.from('archived_charts').select('id, data, updated_at, deleted'),
+    // Wie bei den Einträgen: explizit auf das eigene Konto filtern, damit die
+    // Trennung nicht allein von der serverseitigen RLS abhängt. Kein Leaking.
+    supabase.from('archived_charts').select('id, data, updated_at, deleted').eq('user_id', uid),
   ]);
   if (remoteChartsRes.error) throw remoteChartsRes.error;
 

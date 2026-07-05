@@ -7,6 +7,7 @@ import {
   cervixScore,
   CERVIX_FERTILE_SCORE,
   formatCents,
+  formatDateDe,
 } from '../utils/nfp.js';
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']; // Index = Date.getDay()
@@ -67,7 +68,7 @@ const TEMP_STEP = 5; // 0,05 °C pro Zeile
 const TEMP_MIN = 3600; // 36,0 °C
 const TEMP_BASE_MAX = 3700; // 37,0 °C – wird bei höheren Messwerten erweitert
 
-export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
+export default function CycleCalendar({ cycles = [], entries, onSelectDay, onDeleteCycle }) {
   const scrollRef = useRef(null);
   const [idx, setIdx] = useState(null);
 
@@ -201,6 +202,16 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
     onSelectDay?.(cell?.dataset.iso ?? today);
   }
 
+  // Kompletten Zyklus löschen – mit Text-Sicherheitsabfrage („ja" tippen).
+  function handleDeleteCycle() {
+    const answer = window.prompt(
+      `Tippe "ja" wenn du den Zyklus (Zyklusstart ${formatDateDe(cycle.startDate)}) wirklich löschen willst`
+    );
+    if (answer && answer.trim().toLowerCase() === 'ja') {
+      onDeleteCycle?.(cycle);
+    }
+  }
+
   function colClass(day, extra = '') {
     const classes = [extra];
     if (day.iso === today) classes.push('is-today-col');
@@ -257,7 +268,18 @@ export default function CycleCalendar({ cycles = [], entries, onSelectDay }) {
           </button>
         </div>
       )}
-      <h3 style={{ fontSize: '1rem' }}>Zyklus ab {cycle.startDate.split('-').reverse().join('.')}</h3>
+      <div className="sheet-head">
+        <h3 style={{ fontSize: '1rem', margin: 0 }}>Zyklus ab {formatDateDe(cycle.startDate)}</h3>
+        <button
+          type="button"
+          className="sheet-delete-btn"
+          aria-label="Diesen Zyklus komplett löschen"
+          title="Diesen Zyklus komplett löschen"
+          onClick={handleDeleteCycle}
+        >
+          🗑️
+        </button>
+      </div>
       <div className="sheet-scroll" ref={scrollRef} onClick={handleClick}>
         <table className="cycle-sheet">
           <tbody>

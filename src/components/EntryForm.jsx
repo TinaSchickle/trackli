@@ -353,7 +353,9 @@ export default function EntryForm({
                 </span>
                 <strong>
                   {formatDateDe(forecast.ovulation.date)}
-                  {forecast.ovulation.day ? ` · Zyklustag ${forecast.ovulation.day}` : ''}
+                  {forecast.ovulation.kind === 'detected' && forecast.ovulation.day
+                    ? ` · Zyklustag ${forecast.ovulation.day}`
+                    : ''}
                 </strong>
               </div>
             )}
@@ -371,7 +373,9 @@ export default function EntryForm({
                 <p className="cib-note">{forecast.phaseNote}</p>
                 {forecast.cyclePhase && (
                   <div className="cib-symptoms">
-                    <p className="cib-sym-title">Mögliche Symptome</p>
+                    <p className="cib-sym-title">
+                      {forecast.cyclePhase.name} – Mögliche Symptome
+                    </p>
                     <div className="cib-sym-group">
                       <strong>Mental</strong>
                       <ul>
@@ -437,6 +441,15 @@ export default function EntryForm({
         </div>
         {cycleDay != null && cycleDay >= 1 && (
           <p className="field-hint">Zyklustag {cycleDay}</p>
+        )}
+        {activeDate !== todayIso() && (
+          <button
+            type="button"
+            className="btn-back-today"
+            onClick={() => setDate(todayIso())}
+          >
+            ↩ Zurück zu heute
+          </button>
         )}
       </div>
 

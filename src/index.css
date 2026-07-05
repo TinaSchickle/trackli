@@ -799,6 +799,13 @@ textarea:focus-visible {
 
 .ov-modal p { font-size: 0.95rem; line-height: 1.5; }
 
+.ov-modal-disclaimer {
+  font-size: 0.72rem;
+  color: var(--color-text-soft);
+  line-height: 1.35;
+  margin-top: 10px;
+}
+
 .ov-modal-actions {
   display: flex;
   flex-direction: column;

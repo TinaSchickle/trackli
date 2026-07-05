@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getAllEntries, syncNow, prepareLocalDataForUser, releaseLocalData } from './db.js';
+import { getAllEntries, deleteEntry, syncNow, prepareLocalDataForUser, releaseLocalData } from './db.js';
 import { isCloudConfigured } from './cloud/supabase.js';
 import { getUser, onAuthChange, isAdmin } from './cloud/auth.js';
 import { segmentIntoCycles } from './utils/cycles.js';
@@ -164,11 +164,13 @@ export default function App() {
     !!currentCycle?.evaluation?.complete &&
     ovDismissed !== currentCycle.id;
 
-  // "Zykluskalender abschließen": Popup schließen und den fertigen Zyklus im
-  // Kalender anzeigen. Ein neuer Zyklus entsteht erst beim nächsten Periodenbeginn.
-  function finishCycleFromModal() {
-    setOvDismissed(currentCycle.id);
-    setTab('calendar');
+  // Einen kompletten Zyklus löschen: alle zugehörigen Einträge entfernen und
+  // danach neu laden. Der Kalender fragt vorher per Texteingabe „ja" ab.
+  async function handleDeleteCycle(cycle) {
+    for (const e of cycle.entries) {
+      await deleteEntry(e.id);
+    }
+    await reloadEntries();
   }
 
   async function handleEntrySaved(savedEntry) {
@@ -301,6 +303,7 @@ export default function App() {
               setSelectedDate(iso);
               setTab('entry');
             }}
+            onDeleteCycle={handleDeleteCycle}
           />
         )}
         {activeTab === 'status' && <StatusTab cycle={currentCycle} />}
@@ -334,8 +337,7 @@ export default function App() {
         <OvulationModal
           infertileFrom={formatDateDe(currentCycle.evaluation.infertileFrom)}
           method={currentCycle.evaluation.symptomMethod}
-          onKeepLogging={() => setOvDismissed(currentCycle.id)}
-          onFinish={finishCycleFromModal}
+          onDismiss={() => setOvDismissed(currentCycle.id)}
         />
       )}
     </div>
