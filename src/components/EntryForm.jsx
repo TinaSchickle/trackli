@@ -353,9 +353,6 @@ export default function EntryForm({
                 </span>
                 <strong>
                   {formatDateDe(forecast.ovulation.date)}
-                  {forecast.ovulation.kind === 'detected' && forecast.ovulation.day
-                    ? ` · Zyklustag ${forecast.ovulation.day}`
-                    : ''}
                 </strong>
               </div>
             )}
