@@ -75,6 +75,17 @@ async function localClear(storeName) {
 // oder versehentlich in ein anderes Konto hochgeladen werden.
 const LOCAL_OWNER_KEY = 'trackli:localDataOwner';
 
+// Einmalige Bereinigung nach dem Konto-Isolations-Fix. Solange die serverseitige
+// Row-Level-Security (versehentlich) ausgeschaltet war, konnten beim Sync fremde
+// Cloud-Zeilen in die lokale IndexedDB gelangen. Wären diese liegen geblieben,
+// hätte der erste Sync *nach* dem Fix sie fälschlich als „eigene" ins jetzige
+// Konto hochgeladen (die Cloud liefert jetzt nur noch eigene Zeilen zurück, die
+// Fremd-Zeilen hätten also kein Gegenstück und gälten als lokale Neuanlage).
+// Deshalb verwirft jedes Gerät seine lokalen Daten genau einmal und lädt sie
+// frisch aus der jetzt sauber isolierten Cloud. Die Zahl im Schlüssel hochzählen,
+// falls je erneut eine solche Zwangsbereinigung nötig wird.
+const ISOLATION_RESET_KEY = 'trackli:isolationResetV1';
+
 // Alle lokalen Daten löschen (Einträge + Charts). Die Cloud bleibt unberührt.
 export async function clearLocalData() {
   await Promise.all([localClear(STORE_ENTRIES), localClear(STORE_ARCHIVED_CHARTS)]);
@@ -87,6 +98,14 @@ export async function clearLocalData() {
 // übernommen.
 export async function prepareLocalDataForUser(userId) {
   try {
+    // Einmalige Zwangsbereinigung möglicher Alt-Leaks (siehe ISOLATION_RESET_KEY).
+    if (localStorage.getItem(ISOLATION_RESET_KEY) !== '1') {
+      await clearLocalData();
+      localStorage.setItem(ISOLATION_RESET_KEY, '1');
+      // Besitzer-Marke zurücksetzen, damit die frisch aus der Cloud geladenen
+      // Daten sauber dem jetzigen Konto zugeordnet werden.
+      localStorage.removeItem(LOCAL_OWNER_KEY);
+    }
     const owner = localStorage.getItem(LOCAL_OWNER_KEY);
     if (owner && owner !== userId) {
       await clearLocalData();
@@ -193,34 +212,6 @@ export async function deleteEntry(id) {
 
 export async function getAllArchivedCharts() {
   return localGetAll(STORE_ARCHIVED_CHARTS);
-}
-
-export async function addArchivedChart(chart) {
-  const stamped = { ...chart, updatedAt: Date.now() };
-  await localPut(STORE_ARCHIVED_CHARTS, stamped);
-  try {
-    const uid = await cloudUserId();
-    if (uid) {
-      await supabase.from('archived_charts').upsert(
-        {
-          user_id: uid,
-          id: String(stamped.id),
-          data: stamped,
-          updated_at: stamped.updatedAt,
-          deleted: false,
-        },
-        { onConflict: 'user_id,id' }
-      );
-    }
-  } catch {
-    /* lokal gespeichert – syncNow() gleicht später ab */
-  }
-  return stamped;
-}
-
-export async function hasArchivedChartForCycle(cycleStartDate) {
-  const all = await getAllArchivedCharts();
-  return all.some((c) => c.cycleStartDate === cycleStartDate);
 }
 
 // ── Zwei-Wege-Abgleich lokal ⇄ Cloud ─────────────────────────────────────────
