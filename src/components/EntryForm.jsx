@@ -18,6 +18,44 @@ const FERNING_OPTIONS = [
   'Vollständiges Farnkraut-Muster',
 ];
 
+// ── Ovulationstest (LH-Test) ────────────────────────────────────────────────
+// WICHTIG: Der Ovulationstest wird VORERST NUR als Eingabeparameter erfasst und
+// fließt bewusst NICHT in die Auswertung/Prognose ein (kein Eintrag in
+// `tracks`, keine Verwendung in utils/nfp.js oder utils/cycles.js). Er dient
+// aktuell rein der Dokumentation. Soll er später ausgewertet werden, muss die
+// Logik in nfp.js explizit ergänzt werden.
+// Referenz-Test der Nutzerin: One Step Ovulationstest, Sensitivität 20 mIU/ml
+// (https://www.amazon.de/dp/B001G7STT0). Optionen laut Auswertungstabelle des
+// Herstellers (Anzeige → Bedeutung).
+const OVU_TEST_OPTIONS = [
+  { value: 'nur-c', label: 'Nur C', display: 'Nur Kontrolllinie (C)', meaning: 'Negativ' },
+  {
+    value: 't-heller',
+    label: 'T heller',
+    display: 'Testlinie (T) heller als C',
+    meaning: 'Negativ – LH steigt evtl. noch',
+  },
+  {
+    value: 't-gleich',
+    label: 'T = C',
+    display: 'T gleich dunkel wie C',
+    meaning: 'Positiv – Eisprung in ~24–36 h',
+  },
+  {
+    value: 't-dunkler',
+    label: 'T dunkler',
+    display: 'T dunkler als C',
+    meaning: 'Positiv (Peak) – fruchtbarste Tage',
+  },
+  { value: 'ungueltig', label: 'Keine C', display: 'Keine C-Linie', meaning: 'Ungültig' },
+];
+
+const OVU_TEST_INFO =
+  'One Step Ovulationstest (LH-Test), Sensitivität 20 mIU/ml. Vergleiche die ' +
+  'Testlinie (T) mit der Kontrolllinie (C): Je näher T an C herankommt bzw. je ' +
+  'dunkler T wird, desto höher der LH-Wert. Hinweis: Dieser Wert wird derzeit nur ' +
+  'erfasst und fließt noch nicht in die Auswertung/Prognose ein.';
+
 const TEMP_EXCLUDE_INFO =
   'Ausklammern bei Störfaktoren, die den Messwert verfälschen: Feiern/Alkohol, zu wenig ' +
   'oder zu viel Schlaf, Zeitzonen-/Umgebungswechsel (Reisen), Stress, spätabends ' +
@@ -50,6 +88,7 @@ function emptyEntry(dateIso) {
     cervixState: null,
     cervixExcluded: false,
     ferning: '',
+    ovulationTest: null, // LH-Test – nur Eingabe, fließt NICHT in die Auswertung ein
     notes: '',
     isPeriodStart: false,
     // Zyklus-Flags werden NICHT vorbelegt: fehlt die Angabe, erbt der Zyklus die
@@ -192,6 +231,7 @@ export default function EntryForm({
       cervicalMucus: f.cervicalMucus || null,
       cervixState: f.cervixState || null,
       ferning: f.ferning || null,
+      ovulationTest: f.ovulationTest || null,
     };
   }
 
@@ -725,6 +765,38 @@ export default function EntryForm({
             </select>
           </div>
         )}
+      </fieldset>
+
+      {/* ── Ovulationstest (LH-Test) ───────────────────── */}
+      {/* Nur Eingabe – bewusst OHNE tracks/Auswertung (siehe OVU_TEST_OPTIONS). */}
+      <fieldset className="module-block">
+        <legend>Ovulationstest (LH-Test)</legend>
+        <div className="field">
+          <div className="checkbox-row" style={{ marginBottom: '.5rem' }}>
+            <span className="field-hint" style={{ margin: 0 }}>
+              Anzeige des Teststreifens auswählen
+            </span>
+            <InfoToggle text={OVU_TEST_INFO} />
+          </div>
+          <Segmented
+            options={OVU_TEST_OPTIONS.map((o) => ({
+              value: o.value,
+              label: o.label,
+              title: `${o.display} → ${o.meaning}`,
+            }))}
+            value={form.ovulationTest}
+            onChange={(v) => update('ovulationTest', v)}
+          />
+          <p className="field-hint">
+            {(() => {
+              const sel = OVU_TEST_OPTIONS.find((o) => o.value === form.ovulationTest);
+              return sel
+                ? `${sel.display}: ${sel.meaning}`
+                : 'Antippen zum Auswählen – erneut antippen für „keine Angabe“. ' +
+                  'Wird derzeit nur erfasst, nicht ausgewertet.';
+            })()}
+          </p>
+        </div>
       </fieldset>
 
       {/* ── Notizen ────────────────────────────────────── */}

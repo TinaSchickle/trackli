@@ -27,6 +27,7 @@ function mkEntry(date, patch) {
     cervixState: null,
     cervixExcluded: false,
     ferning: null,
+    ovulationTest: null,
     notes: '',
     isPeriodStart: false,
     trackTemp: true,
