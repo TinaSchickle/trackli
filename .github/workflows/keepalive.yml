@@ -25,10 +25,19 @@ jobs:
           fi
           # Eine leichte REST-Anfrage genügt als Aktivität. Row-Level-Security
           # gibt ohne Login 0 Zeilen zurück – die Anfrage selbst zählt trotzdem.
-          code=$(curl -s -o /dev/null -w "%{http_code}" \
+          # --fail-with-body würde bei 4xx/5xx selbst fehlschlagen; wir werten
+          # den Code aber manuell aus, weil 401/403 (RLS) hier normal sind.
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
             "$SUPABASE_URL/rest/v1/entries?select=date&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY")
+            -H "apikey: $SUPABASE_ANON_KEY") || code="curl-error"
           echo "HTTP $code"
+          # "000" oder ein nicht-numerischer Wert heißt: curl kam gar nicht erst
+          # durch (DNS/Timeout/Verbindung verweigert) – genau das Symptom eines
+          # pausierten Projekts. Das darf NICHT als Erfolg durchgehen.
+          if ! [ "$code" -eq "$code" ] 2>/dev/null || [ "$code" = "000" ]; then
+            echo "Keine Verbindung zustande gekommen – Projekt evtl. pausiert oder DNS/Netzwerkfehler."
+            exit 1
+          fi
           # 200 (leere Liste) oder 401/403 (RLS) heißt: Projekt ist wach.
           if [ "$code" -ge 500 ]; then
             echo "Server-Fehler – Projekt evtl. pausiert."
