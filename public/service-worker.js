@@ -38,3 +38,37 @@ self.addEventListener('fetch', (event) => {
     )
   );
 });
+
+// Erinnerungs-Push (z. B. "noch kein Zervixschleim heute"), ausgelöst vom
+// Cron-Job in scripts/send-mucus-reminders.mjs. Payload ist JSON {title, body}.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Zykluskalender', body: 'Denk an deinen heutigen Eintrag.' };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // kein/kein gültiges JSON – Standardtext behalten
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      tag: 'mucus-reminder',
+    })
+  );
+});
+
+// Klick auf die Benachrichtigung: vorhandenes Fenster fokussieren oder die
+// App neu öffnen.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('./');
+      return undefined;
+    })
+  );
+});

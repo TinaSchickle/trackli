@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
 import {
   signIn,
@@ -8,6 +8,13 @@ import {
   sendPasswordReset,
   updatePassword,
 } from '../cloud/auth.js';
+import {
+  isPushSupported,
+  isPushConfigured,
+  isMucusReminderEnabled,
+  enableMucusReminder,
+  disableMucusReminder,
+} from '../cloud/push.js';
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -35,6 +42,39 @@ export default function AccountModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
+  const [reminderOn, setReminderOn] = useState(false);
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderError, setReminderError] = useState(null);
+
+  useEffect(() => {
+    if (isCloudConfigured && user) {
+      isMucusReminderEnabled().then(setReminderOn);
+    }
+  }, [user]);
+
+  async function handleToggleReminder() {
+    setReminderError(null);
+    setReminderBusy(true);
+    try {
+      if (reminderOn) {
+        await disableMucusReminder();
+        setReminderOn(false);
+      } else {
+        const result = await enableMucusReminder();
+        if (result === 'granted') {
+          setReminderOn(true);
+        } else if (result === 'denied') {
+          setReminderError('Benachrichtigungen wurden blockiert – Erlaubnis in den Handy-/Browser-Einstellungen für diese Seite ändern.');
+        } else if (result === 'unsupported') {
+          setReminderError('Push-Benachrichtigungen werden auf diesem Gerät/Browser nicht unterstützt (bei iPhone: App über „Zum Home-Bildschirm" installieren und von dort öffnen).');
+        }
+      }
+    } catch (err) {
+      setReminderError(humanError(err));
+    } finally {
+      setReminderBusy(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -173,6 +213,24 @@ export default function AccountModal({
                     ? `Zuletzt synchronisiert: ${new Date(lastSyncAt).toLocaleString('de-DE')}`
                     : 'Noch nicht synchronisiert.'}
             </div>
+            {isPushConfigured && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={reminderOn}
+                    disabled={reminderBusy || !isPushSupported()}
+                    onChange={handleToggleReminder}
+                  />
+                  Erinnerung um 20 Uhr, falls heute noch kein Zervixschleim eingetragen ist
+                </label>
+                {reminderError && (
+                  <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
+                    {reminderError}
+                  </p>
+                )}
+              </div>
+            )}
             <button
               className="btn-secondary"
               onClick={handleSignOut}

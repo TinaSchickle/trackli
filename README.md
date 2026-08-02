@@ -51,6 +51,40 @@ gleicht die App bei Start, Login und Rückkehr zur App automatisch ab (Regel:
 neueste Änderung pro Tag gewinnt). Offline eingegebene Werte werden beim nächsten
 Online-Abgleich nachgezogen.
 
+## Push-Erinnerung einrichten (optional)
+
+Erinnert um 20 Uhr (Europe/Berlin) per Push-Benachrichtigung, falls für den
+aktuellen Tag noch kein Zervixschleim-Wert eingetragen ist (und Zervixschleim
+für den laufenden Zyklus nicht deaktiviert wurde). Braucht Cloud-Sync (siehe
+oben) als Voraussetzung.
+
+1. **VAPID-Schlüsselpaar erzeugen** (einmalig, lokal):
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. **Schema erweitern:** `supabase-setup.sql` erneut komplett im Supabase
+   *SQL Editor* ausführen (fügt nur die neue Tabelle `push_subscriptions`
+   hinzu, der Rest ist idempotent).
+3. **Service Role Key holen:** *Project Settings → API* → **Secret key**
+   (früher „service_role" genannt) kopieren. Dieser Key umgeht Row-Level-
+   Security bewusst – er landet **nur** als GitHub-Actions-Secret, niemals im
+   Frontend/Build.
+4. **GitHub-Secrets anlegen** (*Settings → Secrets and variables → Actions*):
+   - `VITE_VAPID_PUBLIC_KEY` – der öffentliche Teil aus Schritt 1
+   - `VAPID_PRIVATE_KEY` – der private Teil aus Schritt 1
+   - `SUPABASE_SERVICE_ROLE_KEY` – der Key aus Schritt 3
+5. Einmal neu deployen (Push auf `main` reicht), damit der Build den
+   öffentlichen VAPID-Key einbettet.
+6. Der Workflow [`mucus-reminder.yml`](./.github/workflows/mucus-reminder.yml)
+   prüft danach stündlich automatisch, ob gerade 20 Uhr Ortszeit ist – kein
+   manueller Trigger nötig. Zum sofortigen Testen: im Actions-Tab den Workflow
+   manuell mit „Sofort senden" (`force`) ausführen.
+7. **In der App:** 👤-Symbol → „Erinnerung um 20 Uhr…" ankreuzen und die
+   Browser-Berechtigung für Benachrichtigungen erteilen. Auf dem iPhone geht
+   das nur, wenn Trackli vorher über „Zum Home-Bildschirm hinzufügen"
+   installiert und von dort geöffnet wurde (iOS 16.4+); auf Android
+   funktioniert es auch direkt im Browser-Tab.
+
 ## Architektur
 
 - **React + Vite**, Charts mit **Recharts**
