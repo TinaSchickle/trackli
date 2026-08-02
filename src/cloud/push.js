@@ -1,11 +1,11 @@
 import { supabase, isCloudConfigured } from './supabase.js';
 import { getUser } from './auth.js';
 
-// Web-Push-Erinnerung: "Bis 20 Uhr noch kein Zervixschleim eingetragen".
-// Der eigentliche Versand läuft serverseitig (GitHub-Action-Cron, siehe
-// scripts/send-mucus-reminders.mjs) – hier wird nur die Browser-Subscription
-// verwaltet und in Supabase abgelegt, damit der Cron-Job weiß, wohin er
-// schicken soll.
+// Web-Push-Erinnerung: "Bis zur eingestellten Stunde noch nicht alle
+// (aktiven) Parameter für heute eingetragen". Der eigentliche Versand läuft
+// serverseitig (GitHub-Action-Cron, siehe scripts/send-daily-reminders.mjs)
+// – hier wird nur die Browser-Subscription verwaltet und in Supabase
+// abgelegt, damit der Cron-Job weiß, wohin er schicken soll.
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -36,7 +36,7 @@ export async function getExistingSubscription() {
  * speichert die Subscription in Supabase (an den eigenen Account gebunden).
  * @returns {Promise<'granted'|'denied'|'unsupported'|'not_signed_in'>}
  */
-export async function enableMucusReminder() {
+export async function enableDailyReminder() {
   if (!isPushSupported() || !isPushConfigured) return 'unsupported';
   const user = await getUser();
   if (!user) return 'not_signed_in';
@@ -70,7 +70,7 @@ export async function enableMucusReminder() {
 }
 
 /** Deaktiviert die Erinnerung wieder: Browser-Subscription + Supabase-Zeile löschen. */
-export async function disableMucusReminder() {
+export async function disableDailyReminder() {
   const sub = await getExistingSubscription();
   if (!sub) return;
   const endpoint = sub.endpoint;
@@ -83,7 +83,7 @@ export async function disableMucusReminder() {
   }
 }
 
-export async function isMucusReminderEnabled() {
+export async function isDailyReminderEnabled() {
   const sub = await getExistingSubscription();
   return Boolean(sub);
 }
@@ -108,9 +108,9 @@ export async function getReminderHour() {
 export async function setReminderHour(hour) {
   if (!isCloudConfigured) return;
   const user = await getUser();
-  if (!user) return;
+  if (!user) throw new Error('Nicht angemeldet.');
   const { error } = await supabase
     .from('notification_settings')
-    .upsert({ user_id: user.id, reminder_hour: hour, updated_at: new Date().toISOString() });
+    .upsert({ user_id: user.id, reminder_hour: hour, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw error;
 }

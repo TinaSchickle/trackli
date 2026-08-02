@@ -54,9 +54,9 @@ Online-Abgleich nachgezogen.
 ## Push-Erinnerung einrichten (optional)
 
 Erinnert zu einer selbst wählbaren Stunde (Zeitzone Europe/Berlin, Default 20
-Uhr) per Push-Benachrichtigung, falls für den aktuellen Tag noch kein
-Zervixschleim-Wert eingetragen ist (und Zervixschleim für den laufenden Zyklus
-nicht deaktiviert wurde). Braucht Cloud-Sync (siehe oben) als Voraussetzung.
+Uhr) per Push-Benachrichtigung, falls für den aktuellen Tag noch nicht alle
+nicht-deaktivierten Module (Temperatur, Zervixschleim, Muttermund, Spucke-Test)
+eingetragen sind. Braucht Cloud-Sync (siehe oben) als Voraussetzung.
 
 1. **VAPID-Schlüsselpaar erzeugen** (einmalig, lokal):
    ```bash
@@ -75,11 +75,11 @@ nicht deaktiviert wurde). Braucht Cloud-Sync (siehe oben) als Voraussetzung.
    - `SUPABASE_SERVICE_ROLE_KEY` – der Key aus Schritt 3
 5. Einmal neu deployen (Push auf `main` reicht), damit der Build den
    öffentlichen VAPID-Key einbettet.
-6. Der Workflow [`mucus-reminder.yml`](./.github/workflows/mucus-reminder.yml)
+6. Der Workflow [`daily-reminder.yml`](./.github/workflows/daily-reminder.yml)
    prüft danach stündlich automatisch, ob gerade die jeweils eingestellte
    Stunde Ortszeit ist – kein manueller Trigger nötig. Zum sofortigen Testen:
    im Actions-Tab den Workflow manuell mit „Sofort senden" (`force`) ausführen.
-7. **In der App:** 👤-Symbol → „Erinnerung um … Uhr…" ankreuzen, gewünschte
+7. **In der App:** 👤-Symbol → „Erinnere mich um … Uhr…" ankreuzen, gewünschte
    Stunde im Dropdown wählen und die Browser-Berechtigung für Benachrichtigungen
    erteilen. Auf dem iPhone geht
    das nur, wenn Trackli vorher über „Zum Home-Bildschirm hinzufügen"

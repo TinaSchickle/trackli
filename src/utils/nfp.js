@@ -797,7 +797,7 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
   const dToOv = ovulation.date ? isoDiffDays(dateIso, ovulation.date) : null;
   const inPeakWindow = dToOv != null && dToOv >= -3 && dToOv <= 0;
 
-  let phase, phaseLabel, phaseNote;
+  let phase, phaseLabel, phaseNote, orientationNote;
   if (ev?.complete && dateIso > ev.infertileFrom) {
     phase = 'infertile';
     phaseLabel = 'Unfruchtbar';
@@ -811,6 +811,26 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
     phaseLabel = 'Hochfruchtbar';
     phaseNote =
       'Beste Tage für eine Schwangerschaft – zum Verhüten jetzt unbedingt schützen.';
+  } else if (ev?.temperature?.status === 'completed' && !ev.complete) {
+    // Temperatur hat einen Anstieg bestätigt, aber das zweite Körperzeichen
+    // (Schleim/Muttermund) fehlt oder ist unvollständig – die doppelte
+    // Kontrolle kann so nie abschließen. Statt endlos "Fruchtbar" anzuzeigen,
+    // wird das explizit als offene Auswertung ausgewiesen (siehe [[nfp.js]]
+    // evaluateCycle-Kommentar zur doppelten Kontrolle).
+    const missingSign =
+      ev.tracks.mucus && ev.tracks.cervix
+        ? 'Schleim- oder Muttermund-Auswertung'
+        : ev.tracks.mucus
+          ? 'Schleim-Auswertung'
+          : ev.tracks.cervix
+            ? 'Muttermund-Auswertung'
+            : 'Auswertung eines zweiten Körperzeichens';
+    phase = 'incomplete';
+    phaseLabel = 'Auswertung unvollständig';
+    phaseNote = `Temperatur zeigt seit dem Abend des ${formatDateDe(ev.temperature.completedDate)} einen bestätigten Anstieg – die ${missingSign} ist aber noch nicht abgeschlossen. Ohne dieses zweite Zeichen bleibt die Phase sicherheitshalber "fruchtbar".`;
+    if (cycle.ovulation?.date) {
+      orientationNote = `Nur zur groben Orientierung, NICHT für Verhütung: Temperaturverlauf deutet auf einen Eisprung um den ${formatDateDe(cycle.ovulation.date)} hin (Zyklustag ${cycle.ovulation.cycleDay}).`;
+    }
   } else {
     phase = 'fertile';
     phaseLabel = 'Fruchtbar';
@@ -831,6 +851,7 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
     phase,
     phaseLabel,
     phaseNote,
+    orientationNote: orientationNote ?? null,
     ovulation,
     cyclePhase,
     nextStart: expectedNextStart(cycle, allCycles),

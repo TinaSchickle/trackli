@@ -111,10 +111,10 @@ insert into public.profiles (id, email)
 select id, email from auth.users
 on conflict (id) do nothing;
 
--- ── Push-Subscriptions (Erinnerung "Zervixschleim noch nicht eingetragen") ──
+-- ── Push-Subscriptions (Erinnerung "heute fehlen noch Module") ──────────────
 -- Ein Gerät = eine Zeile (Web-Push-Endpoint + Verschlüsselungs-Keys). Der
 -- eigentliche Versand läuft über einen GitHub-Actions-Cron mit dem Secret-Key
--- (siehe scripts/send-mucus-reminders.mjs) und umgeht damit RLS bewusst – der
+-- (siehe scripts/send-daily-reminders.mjs) und umgeht damit RLS bewusst – der
 -- Browser selbst darf nur seine eigene(n) Subscription(en) verwalten.
 create table if not exists public.push_subscriptions (
   user_id     uuid   not null references auth.users (id) on delete cascade,

@@ -39,8 +39,9 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Erinnerungs-Push (z. B. "noch kein Zervixschleim heute"), ausgelöst vom
-// Cron-Job in scripts/send-mucus-reminders.mjs. Payload ist JSON {title, body}.
+// Erinnerungs-Push (z. B. "heute fehlen noch: Temperatur, Zervixschleim"),
+// ausgelöst vom Cron-Job in scripts/send-daily-reminders.mjs. Payload ist
+// JSON {title, body}.
 self.addEventListener('push', (event) => {
   let payload = { title: 'Zykluskalender', body: 'Denk an deinen heutigen Eintrag.' };
   try {
@@ -53,7 +54,7 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',
-      tag: 'mucus-reminder',
+      tag: 'daily-reminder',
     })
   );
 });

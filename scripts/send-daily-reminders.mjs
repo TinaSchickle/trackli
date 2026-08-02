@@ -1,7 +1,8 @@
-// Cron-Job (GitHub Actions, .github/workflows/mucus-reminder.yml): schickt
+// Cron-Job (GitHub Actions, .github/workflows/daily-reminder.yml): schickt
 // eine Push-Erinnerung an Nutzer:innen, die bis zu ihrer in der App
 // eingestellten Stunde (Tabelle notification_settings, Default 20 Uhr,
-// Zeitzone Europe/Berlin) noch keinen Zervixschleim-Wert für heute
+// Zeitzone Europe/Berlin) noch nicht für alle nicht-deaktivierten Module
+// (Temperatur, Zervixschleim, Muttermund, Spucke-Test) einen Wert für heute
 // eingetragen haben. Läuft stündlich; jeder Nutzer wird mit seiner eigenen
 // Wunschstunde verglichen (umgeht Sommer-/Winterzeit-Verschiebungen, statt
 // feste UTC-Cron-Zeiten pro Stunde pflegen zu müssen).
@@ -56,9 +57,21 @@ const { hour, isoDate } = localHourAndDate(REMINDER_TZ);
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-/** Ermittelt, ob der aktuelle Zyklus des Nutzers Zervixschleim überhaupt trackt
- * und ob für "heute" bereits ein Wert (oder eine Ausklammerung) vorliegt. */
-async function needsReminder(userId) {
+// Ein Modul pro nicht-deaktivierbarem Auswertungs-Zeichen. "excludedField"
+// ist null bei Modulen ohne eigenes "ausklammern"-Flag (Spucke/Farnkraut).
+const MODULES = [
+  { track: 'trackTemp', field: 'temperature', excludedField: 'tempExcluded', label: 'Temperatur',
+    isFilled: (v) => typeof v === 'number' && !Number.isNaN(v) },
+  { track: 'trackMucus', field: 'cervicalMucus', excludedField: 'mucusExcluded', label: 'Zervixschleim',
+    isFilled: Boolean },
+  { track: 'trackCervix', field: 'cervixState', excludedField: 'cervixExcluded', label: 'Muttermund',
+    isFilled: Boolean },
+  { track: 'trackFerning', field: 'ferning', excludedField: null, label: 'Spucke-Test',
+    isFilled: Boolean },
+];
+
+/** Liefert die Namen aller heute noch fehlenden, aber aktiven Module – leer, wenn nichts fehlt. */
+async function missingModulesToday(userId) {
   const { data: entries, error } = await supabase
     .from('entries')
     .select('date, data')
@@ -67,7 +80,7 @@ async function needsReminder(userId) {
     .order('date', { ascending: true })
     .limit(500);
   if (error) throw error;
-  if (!entries?.length) return false;
+  if (!entries?.length) return [];
 
   let cycleStartIdx = -1;
   for (let i = entries.length - 1; i >= 0; i--) {
@@ -76,29 +89,32 @@ async function needsReminder(userId) {
       break;
     }
   }
-  if (cycleStartIdx === -1) return false;
+  if (cycleStartIdx === -1) return [];
 
-  const trackMucus = entries[cycleStartIdx].data?.trackMucus ?? true;
-  if (!trackMucus) return false;
+  const startData = entries[cycleStartIdx].data ?? {};
+  const today = entries.find((e) => e.date === isoDate)?.data ?? {};
 
-  const today = entries.find((e) => e.date === isoDate);
-  const alreadyHandled =
-    today && (Boolean(today.data?.cervicalMucus) || today.data?.mucusExcluded === true);
-  return !alreadyHandled;
+  const missing = [];
+  for (const m of MODULES) {
+    const active = startData[m.track] ?? true;
+    if (!active) continue;
+    const excluded = m.excludedField ? today[m.excludedField] === true : false;
+    if (excluded) continue;
+    if (!m.isFilled(today[m.field])) missing.push(m.label);
+  }
+  return missing;
 }
 
-async function sendAndPrune(userId, subs) {
+async function sendAndPrune(userId, subs, missing) {
+  const body =
+    missing.length === 1
+      ? `Heute fehlt noch: ${missing[0]}.`
+      : `Heute fehlen noch: ${missing.join(', ')}.`;
   for (const sub of subs) {
     const subscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
     try {
-      await webpush.sendNotification(
-        subscription,
-        JSON.stringify({
-          title: 'Zykluskalender',
-          body: 'Heute noch kein Zervixschleim eingetragen – kurz nachtragen?',
-        })
-      );
-      console.log(`Push gesendet an ${userId} (${sub.endpoint.slice(0, 40)}…)`);
+      await webpush.sendNotification(subscription, JSON.stringify({ title: 'Zykluskalender', body }));
+      console.log(`Push gesendet an ${userId} (${sub.endpoint.slice(0, 40)}…): ${body}`);
     } catch (err) {
       const status = err?.statusCode;
       if (status === 404 || status === 410) {
@@ -134,9 +150,10 @@ for (const [userId, subs] of byUser) {
     console.log(`${userId}: Wunschstunde ${wantedHour} Uhr, jetzt ${hour} Uhr – übersprungen.`);
     continue;
   }
-  if (await needsReminder(userId)) {
-    await sendAndPrune(userId, subs);
+  const missing = await missingModulesToday(userId);
+  if (missing.length) {
+    await sendAndPrune(userId, subs, missing);
   } else {
-    console.log(`${userId}: Eintrag heute vorhanden/nicht nötig – keine Erinnerung.`);
+    console.log(`${userId}: heute nichts offen – keine Erinnerung.`);
   }
 }

@@ -468,6 +468,9 @@ export default function EntryForm({
                 }
               >
                 <p className="cib-note">{todayForecast.phaseNote}</p>
+                {todayForecast.orientationNote && (
+                  <p className="cib-orientation">{todayForecast.orientationNote}</p>
+                )}
                 {todayForecast.cyclePhase && (
                   <div className="cib-symptoms">
                     <p className="cib-sym-title">

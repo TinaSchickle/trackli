@@ -1,13 +1,14 @@
-name: Zervixschleim-Erinnerung
+name: Tages-Erinnerung
 
-# Prüft stündlich, ob es für eingeloggte Nutzer:innen mit aktivierter
-# Erinnerung gerade 20 Uhr (Europe/Berlin) ist und heute noch kein
-# Zervixschleim-Wert eingetragen wurde – falls ja, schickt eine Push-
-# Benachrichtigung ans Handy (siehe scripts/send-mucus-reminders.mjs).
+# Prüft stündlich, ob für Nutzer:innen mit aktivierter Erinnerung gerade ihre
+# eingestellte Stunde (Europe/Berlin) erreicht ist und ob noch aktive Module
+# (Temperatur, Zervixschleim, Muttermund, Spucke-Test) für heute fehlen –
+# falls ja, schickt eine Push-Benachrichtigung ans Handy (siehe
+# scripts/send-daily-reminders.mjs).
 
 on:
   schedule:
-    - cron: '0 * * * *' # jede volle Stunde UTC; das Skript filtert selbst auf 20 Uhr Ortszeit
+    - cron: '0 * * * *' # jede volle Stunde UTC; das Skript filtert selbst auf die Wunschstunde je Nutzer
   workflow_dispatch:
     inputs:
       force:
@@ -24,7 +25,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: node scripts/send-mucus-reminders.mjs
+      - run: node scripts/send-daily-reminders.mjs
         env:
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

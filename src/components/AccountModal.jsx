@@ -11,9 +11,9 @@ import {
 import {
   isPushSupported,
   isPushConfigured,
-  isMucusReminderEnabled,
-  enableMucusReminder,
-  disableMucusReminder,
+  isDailyReminderEnabled,
+  enableDailyReminder,
+  disableDailyReminder,
   getReminderHour,
   setReminderHour,
 } from '../cloud/push.js';
@@ -53,17 +53,20 @@ export default function AccountModal({
 
   useEffect(() => {
     if (isCloudConfigured && user) {
-      isMucusReminderEnabled().then(setReminderOn);
-      getReminderHour().then(setReminderHourState);
+      isDailyReminderEnabled().then(setReminderOn).catch((err) => setReminderError(humanError(err)));
+      getReminderHour().then(setReminderHourState).catch((err) => setReminderError(humanError(err)));
     }
   }, [user]);
 
   async function handleChangeHour(e) {
     const hour = Number(e.target.value);
+    const previous = reminderHour;
     setReminderHourState(hour); // sofort reagieren, nicht erst nach dem Speichern
+    setReminderError(null);
     try {
       await setReminderHour(hour);
     } catch (err) {
+      setReminderHourState(previous); // Änderung zurückrollen, wenn Speichern fehlschlägt
       setReminderError(humanError(err));
     }
   }
@@ -73,10 +76,10 @@ export default function AccountModal({
     setReminderBusy(true);
     try {
       if (reminderOn) {
-        await disableMucusReminder();
+        await disableDailyReminder();
         setReminderOn(false);
       } else {
-        const result = await enableMucusReminder();
+        const result = await enableDailyReminder();
         if (result === 'granted') {
           setReminderOn(true);
         } else if (result === 'denied') {
@@ -231,15 +234,16 @@ export default function AccountModal({
             </div>
             {isPushConfigured && (
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.9rem' }}>
                   <input
                     type="checkbox"
                     checked={reminderOn}
                     disabled={reminderBusy || !isPushSupported()}
                     onChange={handleToggleReminder}
+                    style={{ marginTop: 3, flexShrink: 0 }}
                   />
-                  <span>
-                    Erinnerung um{' '}
+                  <span style={{ minWidth: 0 }}>
+                    Erinnere mich um{' '}
                     <select
                       value={reminderHour}
                       disabled={!reminderOn || reminderBusy}
@@ -252,7 +256,9 @@ export default function AccountModal({
                         </option>
                       ))}
                     </select>{' '}
-                    Uhr, falls heute noch kein Zervixschleim eingetragen ist
+                    Uhr, falls bis dahin noch Parameter für den Tag fehlen (geprüft
+                    werden alle nicht deaktivierten Module: Temperatur, Zervixschleim,
+                    Muttermund, Spucke-Test)
                   </span>
                 </label>
                 {reminderError && (
