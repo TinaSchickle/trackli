@@ -264,12 +264,15 @@ export default function AccountModal({
                         </option>
                       ))}
                     </select>{' '}
-                    Uhr, falls bis dahin noch Parameter für den Tag fehlen{' '}
-                    <span style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-                      <InfoToggle text={REMINDER_MODULES_INFO} />
-                    </span>
+                    Uhr, falls bis dahin noch Parameter für den Tag fehlen.
                   </span>
                 </label>
+                {/* Eigene Zeile, rechtsbündig: hält .info-details' right:0-Popover
+                    innerhalb des Modals, statt es mitten im umbrechenden Satz zu
+                    verankern (dort konnte es über den Bildschirmrand hinausragen). */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <InfoToggle text={REMINDER_MODULES_INFO} />
+                </div>
                 {reminderError && (
                   <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
                     {reminderError}
