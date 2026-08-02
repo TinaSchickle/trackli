@@ -1,14 +1,14 @@
 name: Tages-Erinnerung
 
-# Prüft stündlich, ob für Nutzer:innen mit aktivierter Erinnerung gerade ihre
-# eingestellte Stunde (Europe/Berlin) erreicht ist und ob noch aktive Module
-# (Temperatur, Zervixschleim, Muttermund, Spucke-Test) für heute fehlen –
-# falls ja, schickt eine Push-Benachrichtigung ans Handy (siehe
-# scripts/send-daily-reminders.mjs).
+# Prüft alle 30 Minuten, ob für Nutzer:innen mit aktivierter Erinnerung gerade
+# ihre eingestellte Uhrzeit (Europe/Berlin, Halbstundenschritte) erreicht ist
+# und ob noch aktive Module (Temperatur, Zervixschleim, Muttermund,
+# Spucke-Test) für heute fehlen – falls ja, schickt eine Push-Benachrichtigung
+# ans Handy (siehe scripts/send-daily-reminders.mjs).
 
 on:
   schedule:
-    - cron: '0 * * * *' # jede volle Stunde UTC; das Skript filtert selbst auf die Wunschstunde je Nutzer
+    - cron: '*/30 * * * *' # jede halbe Stunde UTC; das Skript filtert selbst auf die Wunschzeit je Nutzer
   workflow_dispatch:
     inputs:
       force:

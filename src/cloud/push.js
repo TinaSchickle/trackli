@@ -88,29 +88,31 @@ export async function isDailyReminderEnabled() {
   return Boolean(sub);
 }
 
-const DEFAULT_REMINDER_HOUR = 20;
+const DEFAULT_REMINDER_TIME = { hour: 20, minute: 0 };
 
-/** Eingestellte Erinnerungsstunde (0–23) des angemeldeten Kontos, sonst Default. */
-export async function getReminderHour() {
-  if (!isCloudConfigured) return DEFAULT_REMINDER_HOUR;
+/** Eingestellte Erinnerungszeit ({hour, minute}, minute ist 0 oder 30) des Kontos, sonst Default. */
+export async function getReminderTime() {
+  if (!isCloudConfigured) return DEFAULT_REMINDER_TIME;
   const user = await getUser();
-  if (!user) return DEFAULT_REMINDER_HOUR;
+  if (!user) return DEFAULT_REMINDER_TIME;
   const { data, error } = await supabase
     .from('notification_settings')
-    .select('reminder_hour')
+    .select('reminder_hour, reminder_minute')
     .eq('user_id', user.id)
     .maybeSingle();
   if (error) throw error;
-  return data?.reminder_hour ?? DEFAULT_REMINDER_HOUR;
+  if (!data) return DEFAULT_REMINDER_TIME;
+  return { hour: data.reminder_hour, minute: data.reminder_minute };
 }
 
-/** Speichert die gewünschte Erinnerungsstunde (0–23) des angemeldeten Kontos. */
-export async function setReminderHour(hour) {
+/** Speichert die gewünschte Erinnerungszeit (Stunde 0–23, Minute 0 oder 30) des Kontos. */
+export async function setReminderTime(hour, minute) {
   if (!isCloudConfigured) return;
   const user = await getUser();
   if (!user) throw new Error('Nicht angemeldet.');
-  const { error } = await supabase
-    .from('notification_settings')
-    .upsert({ user_id: user.id, reminder_hour: hour, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  const { error } = await supabase.from('notification_settings').upsert(
+    { user_id: user.id, reminder_hour: hour, reminder_minute: minute, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
   if (error) throw error;
 }

@@ -53,10 +53,11 @@ Online-Abgleich nachgezogen.
 
 ## Push-Erinnerung einrichten (optional)
 
-Erinnert zu einer selbst wählbaren Stunde (Zeitzone Europe/Berlin, Default 20
-Uhr) per Push-Benachrichtigung, falls für den aktuellen Tag noch nicht alle
-nicht-deaktivierten Module (Temperatur, Zervixschleim, Muttermund, Spucke-Test)
-eingetragen sind. Braucht Cloud-Sync (siehe oben) als Voraussetzung.
+Erinnert zu einer selbst wählbaren Uhrzeit in Halbstundenschritten (Zeitzone
+Europe/Berlin, Default 20:00) per Push-Benachrichtigung, falls für den
+aktuellen Tag noch nicht alle nicht-deaktivierten Module (Temperatur,
+Zervixschleim, Muttermund, Spucke-Test) eingetragen sind. Braucht Cloud-Sync
+(siehe oben) als Voraussetzung.
 
 1. **VAPID-Schlüsselpaar erzeugen** (einmalig, lokal):
    ```bash
@@ -76,12 +77,13 @@ eingetragen sind. Braucht Cloud-Sync (siehe oben) als Voraussetzung.
 5. Einmal neu deployen (Push auf `main` reicht), damit der Build den
    öffentlichen VAPID-Key einbettet.
 6. Der Workflow [`daily-reminder.yml`](./.github/workflows/daily-reminder.yml)
-   prüft danach stündlich automatisch, ob gerade die jeweils eingestellte
-   Stunde Ortszeit ist – kein manueller Trigger nötig. Zum sofortigen Testen:
-   im Actions-Tab den Workflow manuell mit „Sofort senden" (`force`) ausführen.
+   prüft danach alle 30 Minuten automatisch, ob gerade die jeweils
+   eingestellte Uhrzeit Ortszeit ist – kein manueller Trigger nötig. Zum
+   sofortigen Testen: im Actions-Tab den Workflow manuell mit „Sofort senden"
+   (`force`) ausführen.
 7. **In der App:** 👤-Symbol → „Erinnere mich um … Uhr…" ankreuzen, gewünschte
-   Stunde im Dropdown wählen und die Browser-Berechtigung für Benachrichtigungen
-   erteilen. Auf dem iPhone geht
+   Uhrzeit im Dropdown wählen (Halbstundenschritte) und die
+   Browser-Berechtigung für Benachrichtigungen erteilen. Auf dem iPhone geht
    das nur, wenn Trackli vorher über „Zum Home-Bildschirm hinzufügen"
    installiert und von dort geöffnet wurde (iOS 16.4+); auf Android
    funktioniert es auch direkt im Browser-Tab.

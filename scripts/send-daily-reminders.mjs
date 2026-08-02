@@ -1,11 +1,12 @@
 // Cron-Job (GitHub Actions, .github/workflows/daily-reminder.yml): schickt
 // eine Push-Erinnerung an Nutzer:innen, die bis zu ihrer in der App
-// eingestellten Stunde (Tabelle notification_settings, Default 20 Uhr,
-// Zeitzone Europe/Berlin) noch nicht für alle nicht-deaktivierten Module
-// (Temperatur, Zervixschleim, Muttermund, Spucke-Test) einen Wert für heute
-// eingetragen haben. Läuft stündlich; jeder Nutzer wird mit seiner eigenen
-// Wunschstunde verglichen (umgeht Sommer-/Winterzeit-Verschiebungen, statt
-// feste UTC-Cron-Zeiten pro Stunde pflegen zu müssen).
+// eingestellten Uhrzeit (Tabelle notification_settings, Halbstundenschritte,
+// Default 20:00, Zeitzone Europe/Berlin) noch nicht für alle
+// nicht-deaktivierten Module (Temperatur, Zervixschleim, Muttermund,
+// Spucke-Test) einen Wert für heute eingetragen haben. Läuft alle 30 Minuten;
+// jeder Nutzer wird mit seiner eigenen Wunschzeit verglichen (umgeht
+// Sommer-/Winterzeit-Verschiebungen, statt feste UTC-Cron-Zeiten pflegen zu
+// müssen).
 //
 // Braucht den Supabase SERVICE ROLE Key (umgeht RLS bewusst, um über alle
 // Nutzer:innen zu prüfen) – NIEMALS im Frontend verwenden, nur hier als
@@ -22,6 +23,7 @@ const {
   VAPID_SUBJECT,
   REMINDER_TZ = 'Europe/Berlin',
   REMINDER_HOUR: DEFAULT_REMINDER_HOUR = '20', // Fallback für Nutzer ohne eigene Einstellung
+  REMINDER_MINUTE: DEFAULT_REMINDER_MINUTE = '0',
   FORCE_RUN,
 } = process.env;
 
@@ -37,7 +39,7 @@ requireEnv('VAPID_PUBLIC_KEY', VAPID_PUBLIC_KEY);
 requireEnv('VAPID_PRIVATE_KEY', VAPID_PRIVATE_KEY);
 requireEnv('VAPID_SUBJECT', VAPID_SUBJECT);
 
-function localHourAndDate(tz) {
+function localTimeAndDate(tz) {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
@@ -45,14 +47,18 @@ function localHourAndDate(tz) {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   }).formatToParts(now);
   const get = (type) => parts.find((p) => p.type === type)?.value;
   const hour = get('hour') === '24' ? '00' : get('hour');
-  return { hour: Number(hour), isoDate: `${get('year')}-${get('month')}-${get('day')}` };
+  // Auf den Halbstunden-Slot runden (0 oder 30) – toleriert kleine Verzögerungen
+  // beim GitHub-Actions-Cron, ohne den falschen Nutzer zu treffen.
+  const minuteSlot = Number(get('minute')) < 30 ? 0 : 30;
+  return { hour: Number(hour), minute: minuteSlot, isoDate: `${get('year')}-${get('month')}-${get('day')}` };
 }
 
-const { hour, isoDate } = localHourAndDate(REMINDER_TZ);
+const { hour, minute, isoDate } = localTimeAndDate(REMINDER_TZ);
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -129,12 +135,14 @@ async function sendAndPrune(userId, subs, missing) {
 
 const [{ data: subscriptions, error: subError }, { data: settings, error: settingsError }] = await Promise.all([
   supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth'),
-  supabase.from('notification_settings').select('user_id, reminder_hour'),
+  supabase.from('notification_settings').select('user_id, reminder_hour, reminder_minute'),
 ]);
 if (subError) throw subError;
 if (settingsError) throw settingsError;
 
-const hourByUser = new Map((settings ?? []).map((s) => [s.user_id, s.reminder_hour]));
+const timeByUser = new Map(
+  (settings ?? []).map((s) => [s.user_id, { hour: s.reminder_hour, minute: s.reminder_minute }])
+);
 
 const byUser = new Map();
 for (const s of subscriptions ?? []) {
@@ -142,12 +150,13 @@ for (const s of subscriptions ?? []) {
   byUser.get(s.user_id).push(s);
 }
 
-console.log(`${byUser.size} Nutzer:innen mit Push-Subscription, lokale Stunde ${hour} (${REMINDER_TZ}), Stand ${isoDate}…`);
+const fmt = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+console.log(`${byUser.size} Nutzer:innen mit Push-Subscription, lokale Zeit ${fmt(hour, minute)} (${REMINDER_TZ}), Stand ${isoDate}…`);
 
 for (const [userId, subs] of byUser) {
-  const wantedHour = hourByUser.get(userId) ?? Number(DEFAULT_REMINDER_HOUR);
-  if (!FORCE_RUN && hour !== wantedHour) {
-    console.log(`${userId}: Wunschstunde ${wantedHour} Uhr, jetzt ${hour} Uhr – übersprungen.`);
+  const wanted = timeByUser.get(userId) ?? { hour: Number(DEFAULT_REMINDER_HOUR), minute: Number(DEFAULT_REMINDER_MINUTE) };
+  if (!FORCE_RUN && (hour !== wanted.hour || minute !== wanted.minute)) {
+    console.log(`${userId}: Wunschzeit ${fmt(wanted.hour, wanted.minute)}, jetzt ${fmt(hour, minute)} – übersprungen.`);
     continue;
   }
   const missing = await missingModulesToday(userId);

@@ -137,11 +137,21 @@ create policy "push subscriptions sind privat"
 grant select, insert, update, delete on public.push_subscriptions to authenticated;
 
 -- ── Erinnerungs-Uhrzeit (pro Nutzer, nicht pro Gerät) ────────────────────────
+-- Halbstundenschritte: reminder_minute ist entweder 0 oder 30.
 create table if not exists public.notification_settings (
-  user_id       uuid    primary key references auth.users (id) on delete cascade,
-  reminder_hour smallint not null default 20 check (reminder_hour between 0 and 23),
-  updated_at    timestamptz not null default now()
+  user_id         uuid    primary key references auth.users (id) on delete cascade,
+  reminder_hour   smallint not null default 20 check (reminder_hour between 0 and 23),
+  reminder_minute smallint not null default 0 check (reminder_minute in (0, 30)),
+  updated_at      timestamptz not null default now()
 );
+
+-- Für bereits bestehende Zeilen aus einer früheren Version des Schemas.
+alter table public.notification_settings
+  add column if not exists reminder_minute smallint not null default 0;
+alter table public.notification_settings
+  drop constraint if exists notification_settings_reminder_minute_check;
+alter table public.notification_settings
+  add constraint notification_settings_reminder_minute_check check (reminder_minute in (0, 30));
 
 alter table public.notification_settings enable row level security;
 

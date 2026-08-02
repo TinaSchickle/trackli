@@ -14,11 +14,15 @@ import {
   isDailyReminderEnabled,
   enableDailyReminder,
   disableDailyReminder,
-  getReminderHour,
-  setReminderHour,
+  getReminderTime,
+  setReminderTime,
 } from '../cloud/push.js';
 
-const REMINDER_HOURS = Array.from({ length: 24 }, (_, h) => h);
+// Alle Halbstundenschritte 00:00–23:30 als "H:M"-Wertepaare fürs Dropdown.
+const REMINDER_SLOTS = Array.from({ length: 48 }, (_, i) => ({
+  hour: Math.floor(i / 2),
+  minute: i % 2 === 0 ? 0 : 30,
+}));
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -49,24 +53,24 @@ export default function AccountModal({
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState(null);
-  const [reminderHour, setReminderHourState] = useState(20);
+  const [reminderTime, setReminderTimeState] = useState({ hour: 20, minute: 0 });
 
   useEffect(() => {
     if (isCloudConfigured && user) {
       isDailyReminderEnabled().then(setReminderOn).catch((err) => setReminderError(humanError(err)));
-      getReminderHour().then(setReminderHourState).catch((err) => setReminderError(humanError(err)));
+      getReminderTime().then(setReminderTimeState).catch((err) => setReminderError(humanError(err)));
     }
   }, [user]);
 
-  async function handleChangeHour(e) {
-    const hour = Number(e.target.value);
-    const previous = reminderHour;
-    setReminderHourState(hour); // sofort reagieren, nicht erst nach dem Speichern
+  async function handleChangeTime(e) {
+    const [hour, minute] = e.target.value.split(':').map(Number);
+    const previous = reminderTime;
+    setReminderTimeState({ hour, minute }); // sofort reagieren, nicht erst nach dem Speichern
     setReminderError(null);
     try {
-      await setReminderHour(hour);
+      await setReminderTime(hour, minute);
     } catch (err) {
-      setReminderHourState(previous); // Änderung zurückrollen, wenn Speichern fehlschlägt
+      setReminderTimeState(previous); // Änderung zurückrollen, wenn Speichern fehlschlägt
       setReminderError(humanError(err));
     }
   }
@@ -245,14 +249,14 @@ export default function AccountModal({
                   <span style={{ minWidth: 0 }}>
                     Erinnere mich um{' '}
                     <select
-                      value={reminderHour}
+                      value={`${reminderTime.hour}:${reminderTime.minute}`}
                       disabled={!reminderOn || reminderBusy}
-                      onChange={handleChangeHour}
+                      onChange={handleChangeTime}
                       style={{ fontSize: '0.9rem' }}
                     >
-                      {REMINDER_HOURS.map((h) => (
-                        <option key={h} value={h}>
-                          {String(h).padStart(2, '0')}:00
+                      {REMINDER_SLOTS.map(({ hour, minute }) => (
+                        <option key={`${hour}:${minute}`} value={`${hour}:${minute}`}>
+                          {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
                         </option>
                       ))}
                     </select>{' '}
