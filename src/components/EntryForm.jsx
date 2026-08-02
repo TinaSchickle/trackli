@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { putEntry } from '../db.js';
 import { shiftIso, todayIso, parseIso } from '../utils/dates.js';
+import InfoToggle from './InfoToggle.jsx';
 import {
   MUCUS,
   MUCUS_CODES,
@@ -102,15 +103,6 @@ function splitTemp(temperature) {
   if (temperature === '' || temperature == null) return ['36', ''];
   const [intPart, decPart] = String(temperature).split('.');
   return [intPart, decPart ?? '0'];
-}
-
-function InfoToggle({ text }) {
-  return (
-    <details className="info-details">
-      <summary aria-label="Info anzeigen">ⓘ</summary>
-      <p>{text}</p>
-    </details>
-  );
 }
 
 function Segmented({ options, value, onChange, disabled }) {

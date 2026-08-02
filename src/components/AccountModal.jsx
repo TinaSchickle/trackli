@@ -17,6 +17,10 @@ import {
   getReminderTime,
   setReminderTime,
 } from '../cloud/push.js';
+import InfoToggle from './InfoToggle.jsx';
+
+const REMINDER_MODULES_INFO =
+  'Geprüft werden alle nicht deaktivierten Module: Temperatur, Zervixschleim, Muttermund, Spucke-Test.';
 
 // Alle Halbstundenschritte 00:00–23:30 als "H:M"-Wertepaare fürs Dropdown.
 const REMINDER_SLOTS = Array.from({ length: 48 }, (_, i) => ({
@@ -260,9 +264,10 @@ export default function AccountModal({
                         </option>
                       ))}
                     </select>{' '}
-                    Uhr, falls bis dahin noch Parameter für den Tag fehlen (geprüft
-                    werden alle nicht deaktivierten Module: Temperatur, Zervixschleim,
-                    Muttermund, Spucke-Test)
+                    Uhr, falls bis dahin noch Parameter für den Tag fehlen{' '}
+                    <span style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                      <InfoToggle text={REMINDER_MODULES_INFO} />
+                    </span>
                   </span>
                 </label>
                 {reminderError && (
