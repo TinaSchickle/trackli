@@ -87,3 +87,30 @@ export async function isMucusReminderEnabled() {
   const sub = await getExistingSubscription();
   return Boolean(sub);
 }
+
+const DEFAULT_REMINDER_HOUR = 20;
+
+/** Eingestellte Erinnerungsstunde (0–23) des angemeldeten Kontos, sonst Default. */
+export async function getReminderHour() {
+  if (!isCloudConfigured) return DEFAULT_REMINDER_HOUR;
+  const user = await getUser();
+  if (!user) return DEFAULT_REMINDER_HOUR;
+  const { data, error } = await supabase
+    .from('notification_settings')
+    .select('reminder_hour')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.reminder_hour ?? DEFAULT_REMINDER_HOUR;
+}
+
+/** Speichert die gewünschte Erinnerungsstunde (0–23) des angemeldeten Kontos. */
+export async function setReminderHour(hour) {
+  if (!isCloudConfigured) return;
+  const user = await getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from('notification_settings')
+    .upsert({ user_id: user.id, reminder_hour: hour, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}

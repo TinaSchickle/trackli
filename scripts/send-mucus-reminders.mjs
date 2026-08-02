@@ -1,9 +1,10 @@
 // Cron-Job (GitHub Actions, .github/workflows/mucus-reminder.yml): schickt
-// eine Push-Erinnerung an alle Nutzer:innen, die bis zur konfigurierten Stunde
-// (Standard 20 Uhr, Zeitzone Europe/Berlin) noch keinen Zervixschleim-Wert für
-// heute eingetragen haben. Läuft stündlich; prüft selbst, ob gerade die
-// richtige lokale Stunde ist (umgeht Sommer-/Winterzeit-Verschiebungen, statt
-// zwei feste UTC-Cron-Zeiten pflegen zu müssen).
+// eine Push-Erinnerung an Nutzer:innen, die bis zu ihrer in der App
+// eingestellten Stunde (Tabelle notification_settings, Default 20 Uhr,
+// Zeitzone Europe/Berlin) noch keinen Zervixschleim-Wert für heute
+// eingetragen haben. Läuft stündlich; jeder Nutzer wird mit seiner eigenen
+// Wunschstunde verglichen (umgeht Sommer-/Winterzeit-Verschiebungen, statt
+// feste UTC-Cron-Zeiten pro Stunde pflegen zu müssen).
 //
 // Braucht den Supabase SERVICE ROLE Key (umgeht RLS bewusst, um über alle
 // Nutzer:innen zu prüfen) – NIEMALS im Frontend verwenden, nur hier als
@@ -19,7 +20,7 @@ const {
   VAPID_PRIVATE_KEY,
   VAPID_SUBJECT,
   REMINDER_TZ = 'Europe/Berlin',
-  REMINDER_HOUR = '20',
+  REMINDER_HOUR: DEFAULT_REMINDER_HOUR = '20', // Fallback für Nutzer ohne eigene Einstellung
   FORCE_RUN,
 } = process.env;
 
@@ -51,10 +52,6 @@ function localHourAndDate(tz) {
 }
 
 const { hour, isoDate } = localHourAndDate(REMINDER_TZ);
-if (!FORCE_RUN && hour !== Number(REMINDER_HOUR)) {
-  console.log(`Lokale Stunde in ${REMINDER_TZ} ist ${hour}, nicht ${REMINDER_HOUR} – übersprungen.`);
-  process.exit(0);
-}
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -114,10 +111,14 @@ async function sendAndPrune(userId, subs) {
   }
 }
 
-const { data: subscriptions, error: subError } = await supabase
-  .from('push_subscriptions')
-  .select('user_id, endpoint, p256dh, auth');
+const [{ data: subscriptions, error: subError }, { data: settings, error: settingsError }] = await Promise.all([
+  supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth'),
+  supabase.from('notification_settings').select('user_id, reminder_hour'),
+]);
 if (subError) throw subError;
+if (settingsError) throw settingsError;
+
+const hourByUser = new Map((settings ?? []).map((s) => [s.user_id, s.reminder_hour]));
 
 const byUser = new Map();
 for (const s of subscriptions ?? []) {
@@ -125,9 +126,14 @@ for (const s of subscriptions ?? []) {
   byUser.get(s.user_id).push(s);
 }
 
-console.log(`${byUser.size} Nutzer:innen mit Push-Subscription, prüfe Stand ${isoDate}…`);
+console.log(`${byUser.size} Nutzer:innen mit Push-Subscription, lokale Stunde ${hour} (${REMINDER_TZ}), Stand ${isoDate}…`);
 
 for (const [userId, subs] of byUser) {
+  const wantedHour = hourByUser.get(userId) ?? Number(DEFAULT_REMINDER_HOUR);
+  if (!FORCE_RUN && hour !== wantedHour) {
+    console.log(`${userId}: Wunschstunde ${wantedHour} Uhr, jetzt ${hour} Uhr – übersprungen.`);
+    continue;
+  }
   if (await needsReminder(userId)) {
     await sendAndPrune(userId, subs);
   } else {

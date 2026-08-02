@@ -14,7 +14,11 @@ import {
   isMucusReminderEnabled,
   enableMucusReminder,
   disableMucusReminder,
+  getReminderHour,
+  setReminderHour,
 } from '../cloud/push.js';
+
+const REMINDER_HOURS = Array.from({ length: 24 }, (_, h) => h);
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -45,12 +49,24 @@ export default function AccountModal({
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState(null);
+  const [reminderHour, setReminderHourState] = useState(20);
 
   useEffect(() => {
     if (isCloudConfigured && user) {
       isMucusReminderEnabled().then(setReminderOn);
+      getReminderHour().then(setReminderHourState);
     }
   }, [user]);
+
+  async function handleChangeHour(e) {
+    const hour = Number(e.target.value);
+    setReminderHourState(hour); // sofort reagieren, nicht erst nach dem Speichern
+    try {
+      await setReminderHour(hour);
+    } catch (err) {
+      setReminderError(humanError(err));
+    }
+  }
 
   async function handleToggleReminder() {
     setReminderError(null);
@@ -215,14 +231,29 @@ export default function AccountModal({
             </div>
             {isPushConfigured && (
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', flexWrap: 'wrap' }}>
                   <input
                     type="checkbox"
                     checked={reminderOn}
                     disabled={reminderBusy || !isPushSupported()}
                     onChange={handleToggleReminder}
                   />
-                  Erinnerung um 20 Uhr, falls heute noch kein Zervixschleim eingetragen ist
+                  <span>
+                    Erinnerung um{' '}
+                    <select
+                      value={reminderHour}
+                      disabled={!reminderOn || reminderBusy}
+                      onChange={handleChangeHour}
+                      style={{ fontSize: '0.9rem' }}
+                    >
+                      {REMINDER_HOURS.map((h) => (
+                        <option key={h} value={h}>
+                          {String(h).padStart(2, '0')}:00
+                        </option>
+                      ))}
+                    </select>{' '}
+                    Uhr, falls heute noch kein Zervixschleim eingetragen ist
+                  </span>
                 </label>
                 {reminderError && (
                   <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>

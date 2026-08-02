@@ -135,3 +135,21 @@ create policy "push subscriptions sind privat"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.push_subscriptions to authenticated;
+
+-- ── Erinnerungs-Uhrzeit (pro Nutzer, nicht pro Gerät) ────────────────────────
+create table if not exists public.notification_settings (
+  user_id       uuid    primary key references auth.users (id) on delete cascade,
+  reminder_hour smallint not null default 20 check (reminder_hour between 0 and 23),
+  updated_at    timestamptz not null default now()
+);
+
+alter table public.notification_settings enable row level security;
+
+drop policy if exists "notification settings sind privat" on public.notification_settings;
+create policy "notification settings sind privat"
+  on public.notification_settings
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.notification_settings to authenticated;

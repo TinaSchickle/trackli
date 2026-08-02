@@ -53,18 +53,18 @@ Online-Abgleich nachgezogen.
 
 ## Push-Erinnerung einrichten (optional)
 
-Erinnert um 20 Uhr (Europe/Berlin) per Push-Benachrichtigung, falls für den
-aktuellen Tag noch kein Zervixschleim-Wert eingetragen ist (und Zervixschleim
-für den laufenden Zyklus nicht deaktiviert wurde). Braucht Cloud-Sync (siehe
-oben) als Voraussetzung.
+Erinnert zu einer selbst wählbaren Stunde (Zeitzone Europe/Berlin, Default 20
+Uhr) per Push-Benachrichtigung, falls für den aktuellen Tag noch kein
+Zervixschleim-Wert eingetragen ist (und Zervixschleim für den laufenden Zyklus
+nicht deaktiviert wurde). Braucht Cloud-Sync (siehe oben) als Voraussetzung.
 
 1. **VAPID-Schlüsselpaar erzeugen** (einmalig, lokal):
    ```bash
    npx web-push generate-vapid-keys
    ```
 2. **Schema erweitern:** `supabase-setup.sql` erneut komplett im Supabase
-   *SQL Editor* ausführen (fügt nur die neue Tabelle `push_subscriptions`
-   hinzu, der Rest ist idempotent).
+   *SQL Editor* ausführen (fügt die neuen Tabellen `push_subscriptions` und
+   `notification_settings` hinzu, der Rest ist idempotent).
 3. **Service Role Key holen:** *Project Settings → API* → **Secret key**
    (früher „service_role" genannt) kopieren. Dieser Key umgeht Row-Level-
    Security bewusst – er landet **nur** als GitHub-Actions-Secret, niemals im
@@ -76,11 +76,12 @@ oben) als Voraussetzung.
 5. Einmal neu deployen (Push auf `main` reicht), damit der Build den
    öffentlichen VAPID-Key einbettet.
 6. Der Workflow [`mucus-reminder.yml`](./.github/workflows/mucus-reminder.yml)
-   prüft danach stündlich automatisch, ob gerade 20 Uhr Ortszeit ist – kein
-   manueller Trigger nötig. Zum sofortigen Testen: im Actions-Tab den Workflow
-   manuell mit „Sofort senden" (`force`) ausführen.
-7. **In der App:** 👤-Symbol → „Erinnerung um 20 Uhr…" ankreuzen und die
-   Browser-Berechtigung für Benachrichtigungen erteilen. Auf dem iPhone geht
+   prüft danach stündlich automatisch, ob gerade die jeweils eingestellte
+   Stunde Ortszeit ist – kein manueller Trigger nötig. Zum sofortigen Testen:
+   im Actions-Tab den Workflow manuell mit „Sofort senden" (`force`) ausführen.
+7. **In der App:** 👤-Symbol → „Erinnerung um … Uhr…" ankreuzen, gewünschte
+   Stunde im Dropdown wählen und die Browser-Berechtigung für Benachrichtigungen
+   erteilen. Auf dem iPhone geht
    das nur, wenn Trackli vorher über „Zum Home-Bildschirm hinzufügen"
    installiert und von dort geöffnet wurde (iOS 16.4+); auf Android
    funktioniert es auch direkt im Browser-Tab.
