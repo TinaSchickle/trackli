@@ -163,3 +163,14 @@ create policy "notification settings sind privat"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.notification_settings to authenticated;
+
+-- ── Rechte für den Erinnerungs-Cron (service_role) ───────────────────────────
+-- Der GitHub-Actions-Cron (scripts/send-daily-reminders.mjs) verbindet sich
+-- mit dem Service-Role-Key, um über ALLE Nutzer:innen zu prüfen (RLS wird
+-- dabei bewusst umgangen). "service_role" umgeht zwar RLS, braucht aber
+-- trotzdem eigene GRANTs auf Tabellenebene – ohne diese schlägt der Cron mit
+-- "permission denied for table ..." (Fehlercode 42501) fehl, obwohl der Key
+-- selbst korrekt ist.
+grant select on public.entries to service_role;
+grant select, delete on public.push_subscriptions to service_role;
+grant select on public.notification_settings to service_role;
