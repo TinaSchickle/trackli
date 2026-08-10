@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAllEntries, deleteEntry, syncNow, prepareLocalDataForUser, releaseLocalData } from './db.js';
 import { isCloudConfigured } from './cloud/supabase.js';
 import { getUser, onAuthChange, isAdmin } from './cloud/auth.js';
+import { syncSubscription } from './cloud/push.js';
 import { segmentIntoCycles } from './utils/cycles.js';
 import { todayIso } from './utils/dates.js';
 import EntryForm from './components/EntryForm.jsx';
@@ -117,6 +118,7 @@ export default function App() {
           await prepareLocalDataForUser(u.id);
           await reloadEntries();
           runSync();
+          syncSubscription();
         } else {
           // Nur beim echten Abmelden (vorher war jemand angemeldet) lokale Daten
           // löschen – nicht beim initialen „noch nie angemeldet"-Zustand, dessen
@@ -138,7 +140,10 @@ export default function App() {
   useEffect(() => {
     if (!isCloudConfigured) return;
     function onVisible() {
-      if (document.visibilityState === 'visible') runSync();
+      if (document.visibilityState === 'visible') {
+        runSync();
+        syncSubscription();
+      }
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);

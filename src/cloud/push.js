@@ -9,6 +9,12 @@ import { getUser } from './auth.js';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
+// Merkt sich lokal, welcher Endpoint zuletzt für dieses Gerät in Supabase
+// gespeichert wurde – so erkennt syncSubscription() eine im Hintergrund vom
+// Browser rotierte Subscription, ohne die Subscriptions anderer Geräte
+// desselben Kontos anzufassen.
+const LOCAL_ENDPOINT_KEY = 'trackli:push-endpoint';
+
 export const isPushConfigured = Boolean(VAPID_PUBLIC_KEY);
 
 export function isPushSupported() {
@@ -66,7 +72,48 @@ export async function enableDailyReminder() {
     );
     if (error) throw error;
   }
+  localStorage.setItem(LOCAL_ENDPOINT_KEY, json.endpoint);
   return 'granted';
+}
+
+/**
+ * Gleicht die aktuelle Browser-Subscription mit der in Supabase gespeicherten
+ * ab. Chrome/FCM rotiert die Subscription gelegentlich still im Hintergrund
+ * (neuer Endpoint); ohne diesen Abgleich bleibt in Supabase der alte, tote
+ * Endpoint stehen, bis ihn der Cron-Job irgendwann mit 404/410 löscht – und
+ * die Erinnerung kommt nie mehr an. Am besten bei jedem App-Start bzw. beim
+ * Zurückkehren in den Vordergrund aufrufen. Wirft nichts, meldet Fehler nur
+ * in der Konsole (soll den normalen App-Start nicht stören).
+ */
+export async function syncSubscription() {
+  if (!isPushSupported() || !isPushConfigured || !isCloudConfigured) return;
+  try {
+    const user = await getUser();
+    if (!user) return;
+    const sub = await getExistingSubscription();
+    if (!sub) return;
+
+    const json = sub.toJSON();
+    const previousEndpoint = localStorage.getItem(LOCAL_ENDPOINT_KEY);
+    if (previousEndpoint === json.endpoint) return;
+
+    if (previousEndpoint) {
+      await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', previousEndpoint);
+    }
+    const { error } = await supabase.from('push_subscriptions').upsert(
+      {
+        user_id: user.id,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+      },
+      { onConflict: 'user_id,endpoint' }
+    );
+    if (error) throw error;
+    localStorage.setItem(LOCAL_ENDPOINT_KEY, json.endpoint);
+  } catch (err) {
+    console.warn('Push-Subscription-Abgleich fehlgeschlagen:', err);
+  }
 }
 
 /** Deaktiviert die Erinnerung wieder: Browser-Subscription + Supabase-Zeile löschen. */
@@ -81,6 +128,7 @@ export async function disableDailyReminder() {
       await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', endpoint);
     }
   }
+  localStorage.removeItem(LOCAL_ENDPOINT_KEY);
 }
 
 export async function isDailyReminderEnabled() {
