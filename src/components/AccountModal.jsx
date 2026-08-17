@@ -57,25 +57,43 @@ export default function AccountModal({
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState(null);
+  // reminderTime ist der Entwurf im Dropdown, savedReminderTime der zuletzt
+  // tatsächlich gespeicherte Wert. Getrennt, damit ein Scrollen durchs native
+  // Auswahlrad (feuert auf Android manchmal Zwischen-onChange-Events) nicht
+  // sofort ungewollt speichert – erst der "Übernehmen"-Klick persistiert.
   const [reminderTime, setReminderTimeState] = useState({ hour: 20, minute: 0 });
+  const [savedReminderTime, setSavedReminderTime] = useState({ hour: 20, minute: 0 });
+  const [reminderTimeSaving, setReminderTimeSaving] = useState(false);
 
   useEffect(() => {
     if (isCloudConfigured && user) {
       isDailyReminderEnabled().then(setReminderOn).catch((err) => setReminderError(humanError(err)));
-      getReminderTime().then(setReminderTimeState).catch((err) => setReminderError(humanError(err)));
+      getReminderTime()
+        .then((t) => {
+          setReminderTimeState(t);
+          setSavedReminderTime(t);
+        })
+        .catch((err) => setReminderError(humanError(err)));
     }
   }, [user]);
 
-  async function handleChangeTime(e) {
+  // Nur der Entwurf im Dropdown – gespeichert wird erst per "Übernehmen"
+  // (handleApplyReminderTime), siehe Kommentar beim reminderTime-State.
+  function handleChangeTime(e) {
     const [hour, minute] = e.target.value.split(':').map(Number);
-    const previous = reminderTime;
-    setReminderTimeState({ hour, minute }); // sofort reagieren, nicht erst nach dem Speichern
+    setReminderTimeState({ hour, minute });
+  }
+
+  async function handleApplyReminderTime() {
     setReminderError(null);
+    setReminderTimeSaving(true);
     try {
-      await setReminderTime(hour, minute);
+      await setReminderTime(reminderTime.hour, reminderTime.minute);
+      setSavedReminderTime(reminderTime);
     } catch (err) {
-      setReminderTimeState(previous); // Änderung zurückrollen, wenn Speichern fehlschlägt
       setReminderError(humanError(err));
+    } finally {
+      setReminderTimeSaving(false);
     }
   }
 
@@ -265,6 +283,19 @@ export default function AccountModal({
                       ))}
                     </select>{' '}
                     Uhr, falls bis dahin noch Parameter für den Tag fehlen.
+                    {reminderOn &&
+                      (reminderTime.hour !== savedReminderTime.hour ||
+                        reminderTime.minute !== savedReminderTime.minute) && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={handleApplyReminderTime}
+                          disabled={reminderTimeSaving || reminderBusy}
+                          style={{ marginLeft: 8, fontSize: '0.8rem', padding: '2px 8px' }}
+                        >
+                          {reminderTimeSaving ? 'Speichert…' : 'Übernehmen'}
+                        </button>
+                      )}
                   </span>
                 </label>
                 {/* Eigene Zeile, rechtsbündig: hält .info-details' right:0-Popover
