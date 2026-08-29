@@ -133,9 +133,27 @@ async function sendAndPrune(userId, subs, missing) {
   }
 }
 
+/** Wiederholt eine Supabase-Abfrage bei einem Fehler ein paar Mal mit kurzer
+ * Pause – fängt kurze, transiente Aussetzer ab (beobachtet z. B. einmalig:
+ * PGRST303 "JWT issued at future" durch Uhr-Drift zwischen GitHub-Actions-
+ * Runner und Supabase), statt den ganzen Lauf – und damit die Erinnerung für
+ * den Tag – daran scheitern zu lassen. */
+async function withRetry(fn, { attempts = 3, delayMs = 2000 } = {}) {
+  let result;
+  for (let i = 0; i < attempts; i++) {
+    result = await fn();
+    if (!result.error) return result;
+    if (i < attempts - 1) {
+      console.log(`Abfrage fehlgeschlagen (Versuch ${i + 1}/${attempts}): ${result.error.message} – erneuter Versuch in ${delayMs}ms…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return result;
+}
+
 const [{ data: subscriptions, error: subError }, { data: settings, error: settingsError }] = await Promise.all([
-  supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth'),
-  supabase.from('notification_settings').select('user_id, reminder_hour, reminder_minute'),
+  withRetry(() => supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth')),
+  withRetry(() => supabase.from('notification_settings').select('user_id, reminder_hour, reminder_minute')),
 ]);
 if (subError) throw subError;
 if (settingsError) throw settingsError;
