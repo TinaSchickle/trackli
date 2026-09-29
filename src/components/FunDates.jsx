@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CARDS,
   LOCATION_OPTIONS,
@@ -7,7 +7,7 @@ import {
   optionFor,
   matchesFilters,
 } from '../funDates/cards.js';
-import { getDoneCardIds, setCardDone } from '../cloud/funDates.js';
+import { getDoneCards, markCardDone, unmarkCardDone, compressImage } from '../cloud/funDates.js';
 
 // Lachende Gesichter für die verdeckten Karten, bis echte Bilder kommen.
 const FACES = ['😄', '😂', '🤣', '😆', '😁', '😹', '😃', '😸'];
@@ -170,7 +170,86 @@ function Quiz({ onDone, onClose }) {
   );
 }
 
-function DateDetail({ card, done, busy, onToggleDone, onBack }) {
+// Fenster nach „✓ Erinnerungs-Selfie“: Foto machen (Kamera) oder hochladen,
+// Vorschau, dann speichern. Abhaken geht auch ohne Foto.
+function SelfieModal({ alreadyDone, onSave, onClose }) {
+  const cameraRef = useRef(null);
+  const uploadRef = useRef(null);
+  const [blob, setBlob] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError(null);
+    try {
+      const small = await compressImage(file);
+      setBlob(small);
+      setPreview(URL.createObjectURL(small));
+    } catch {
+      setError('Das Bild konnte nicht gelesen werden. Bitte ein anderes probieren.');
+    }
+  }
+
+  async function save(withPhoto) {
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave(withPhoto ? blob : null);
+    } catch {
+      setError('Speichern hat nicht geklappt. Bitte nochmal versuchen.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
+      <div className="modal-sheet fd-selfie" onClick={(e) => e.stopPropagation()}>
+        <h3>Erinnerungs-Selfie 📸</h3>
+        <p className="fd-intro" style={{ marginBottom: 12 }}>
+          Haltet den Moment fest – das Foto kommt dann auf eure Karte an der Pinnwand.
+        </p>
+
+        <div className="fd-selfie-frame">
+          {preview ? <img src={preview} alt="Vorschau eures Selfies" /> : <PlaceholderImage label="Noch kein Foto" />}
+        </div>
+
+        <input ref={cameraRef} type="file" accept="image/*" capture="user" hidden onChange={handleFile} />
+        <input ref={uploadRef} type="file" accept="image/*" hidden onChange={handleFile} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button type="button" className="btn-secondary" style={{ flex: 1 }} disabled={busy} onClick={() => cameraRef.current.click()}>
+            📷 {preview ? 'Neu aufnehmen' : 'Foto machen'}
+          </button>
+          <button type="button" className="btn-secondary" style={{ flex: 1 }} disabled={busy} onClick={() => uploadRef.current.click()}>
+            🖼️ Hochladen
+          </button>
+        </div>
+
+        {error && <p className="fd-error" style={{ marginTop: 0 }}>{error}</p>}
+
+        <button type="button" className="btn-primary" disabled={!blob || busy} onClick={() => save(true)}>
+          {busy ? 'Speichert…' : 'Speichern ✓'}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={busy}
+          onClick={alreadyDone ? onClose : () => save(false)}
+          style={{ width: '100%', marginTop: 10, border: 'none' }}
+        >
+          {alreadyDone ? 'Abbrechen' : 'Ohne Foto abhaken'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DateDetail({ card, done, selfie, busy, onDone, onUndo, onBack }) {
   const media = card.media ?? [];
   return (
     <div className="screen fd-detail">
@@ -178,6 +257,13 @@ function DateDetail({ card, done, busy, onToggleDone, onBack }) {
       <h1 className="fd-detail-title">{card.title}</h1>
       <CardIcons card={card} />
       {card.intro && <p className="fd-intro">{card.intro}</p>}
+
+      {selfie && (
+        <figure className="fd-memory">
+          <img src={selfie} alt="Euer Erinnerungs-Selfie" />
+          <figcaption>Eure Erinnerung ♥</figcaption>
+        </figure>
+      )}
 
       {media.length === 0 ? (
         <div className="fd-hero"><PlaceholderImage label="Bilder & Videos folgen" /></div>
@@ -213,21 +299,28 @@ function DateDetail({ card, done, busy, onToggleDone, onBack }) {
         </ol>
       </section>
 
-      <button
-        type="button"
-        className={done ? 'btn-secondary' : 'btn-primary'}
-        disabled={busy}
-        onClick={onToggleDone}
-        style={{ width: '100%' }}
-      >
-        {done ? 'Wieder verdecken' : 'Haben wir gemacht ✓'}
-      </button>
+      {done ? (
+        <>
+          <button type="button" className="btn-primary" disabled={busy} onClick={onDone} style={{ marginBottom: 10 }}>
+            📸 {selfie ? 'Selfie ändern' : 'Selfie hinzufügen'}
+          </button>
+          <button type="button" className="btn-secondary" disabled={busy} onClick={onUndo} style={{ width: '100%' }}>
+            Wieder verdecken
+          </button>
+        </>
+      ) : (
+        <button type="button" className="btn-primary" disabled={busy} onClick={onDone}>
+          ✓ Erinnerungs-Selfie
+        </button>
+      )}
     </div>
   );
 }
 
 export default function FunDates({ user, onHome }) {
-  const [doneIds, setDoneIds] = useState([]);
+  // { [cardId]: selfieUrl | null } – alle erledigten Karten.
+  const [doneMap, setDoneMap] = useState({});
+  const [selfieOpen, setSelfieOpen] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [quizOpen, setQuizOpen] = useState(false);
   // Nach „Goooo“: gemischte Karten samt Zufalls-Neigung/Startpunkt fürs Verteilen.
@@ -241,8 +334,8 @@ export default function FunDates({ user, onHome }) {
 
   useEffect(() => {
     setLoadError(null);
-    getDoneCardIds(user)
-      .then(setDoneIds)
+    getDoneCards(user)
+      .then(setDoneMap)
       .catch(() => setLoadError('Erledigte Dates konnten nicht geladen werden.'));
   }, [user]);
 
@@ -279,7 +372,7 @@ export default function FunDates({ user, onHome }) {
 
   function handleCardClick(id) {
     if (flippingId) return;
-    if (doneIds.includes(id)) {
+    if (id in doneMap) {
       setOpenId(id);
       return;
     }
@@ -291,12 +384,24 @@ export default function FunDates({ user, onHome }) {
     }, FLIP_MS);
   }
 
-  async function handleToggleDone() {
-    const done = !doneIds.includes(openId);
+  // Aus dem Selfie-Fenster: abhaken (mit oder ohne Foto). Fehler zeigt das
+  // Fenster selbst an, deshalb hier weiterwerfen.
+  async function handleSaveSelfie(blob) {
+    const url = await markCardDone(user, openId, blob);
+    setDoneMap((prev) => ({ ...prev, [openId]: blob ? url : prev[openId] ?? null }));
+    setSelfieOpen(false);
+  }
+
+  async function handleUndo() {
+    if (!window.confirm('Karte wieder verdecken? Ein Selfie dazu wird gelöscht.')) return;
     setBusy(true);
     try {
-      await setCardDone(user, openId, done);
-      setDoneIds((prev) => (done ? [...prev, openId] : prev.filter((id) => id !== openId)));
+      await unmarkCardDone(user, openId);
+      setDoneMap((prev) => {
+        const next = { ...prev };
+        delete next[openId];
+        return next;
+      });
     } catch {
       setLoadError('Speichern hat nicht geklappt. Bitte später nochmal versuchen.');
     } finally {
@@ -309,11 +414,14 @@ export default function FunDates({ user, onHome }) {
       <>
         <DateDetail
           card={openCard}
-          done={doneIds.includes(openCard.id)}
+          done={openCard.id in doneMap}
+          selfie={doneMap[openCard.id]}
           busy={busy}
-          onToggleDone={handleToggleDone}
+          onDone={() => setSelfieOpen(true)}
+          onUndo={handleUndo}
           onBack={() => setConfirmBack(true)}
         />
+        {selfieOpen && <SelfieModal alreadyDone={openCard.id in doneMap} onSave={handleSaveSelfie} onClose={() => setSelfieOpen(false)} />}
         {loadError && <p className="fd-error" style={{ padding: '0 20px' }}>{loadError}</p>}
         {confirmBack && (
           <div className="modal-backdrop" onClick={() => setConfirmBack(false)}>
@@ -403,7 +511,8 @@ export default function FunDates({ user, onHome }) {
           <div className="fd-grid" key={dealKey}>
             {deck.map((d, i) => {
               const card = CARDS.find((c) => c.id === d.id);
-              const done = doneIds.includes(d.id);
+              const done = d.id in doneMap;
+              const photo = doneMap[d.id] || card.cover;
               const flipped = done || flippingId === d.id;
               return (
                 <button
@@ -430,8 +539,8 @@ export default function FunDates({ user, onHome }) {
                     </span>
                     <span className="fd-face fd-front-face">
                       <span className="fd-photo">
-                        {card.cover ? (
-                          <img src={card.cover} alt="" className="fd-cover" />
+                        {photo ? (
+                          <img src={photo} alt="" className="fd-cover" />
                         ) : (
                           <PlaceholderImage />
                         )}

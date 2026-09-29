@@ -288,3 +288,33 @@ $$;
 
 revoke execute on function public.admin_set_password(uuid, text) from public, anon;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
+
+-- ── Spaß-Dates: Erinnerungs-Selfies ─────────────────────────────────────────
+-- Beim Abhaken eines Dates kann ein Foto gemacht/hochgeladen werden. Es liegt
+-- privat im Storage-Bucket "fun-date-selfies" unter <user_id>/<card_id>.jpg;
+-- die Policies erlauben jedem Konto nur seinen eigenen Ordner.
+alter table public.fun_dates_done add column if not exists selfie_path text;
+
+insert into storage.buckets (id, name, public)
+values ('fun-date-selfies', 'fun-date-selfies', false)
+on conflict (id) do nothing;
+
+drop policy if exists "selfies lesen" on storage.objects;
+create policy "selfies lesen" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'fun-date-selfies' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "selfies hochladen" on storage.objects;
+create policy "selfies hochladen" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'fun-date-selfies' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "selfies ersetzen" on storage.objects;
+create policy "selfies ersetzen" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'fun-date-selfies' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "selfies loeschen" on storage.objects;
+create policy "selfies loeschen" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'fun-date-selfies' and (storage.foldername(name))[1] = auth.uid()::text);
