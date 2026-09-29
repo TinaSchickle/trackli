@@ -4,6 +4,7 @@ import { isCloudConfigured } from '../cloud/supabase.js';
 // Kacheln der Startseite. Weitere Bereiche kommen hier einfach dazu;
 // solange `active` false ist, wird die Kachel ausgegraut als „Bald" gezeigt.
 export const HUB_TILES = [
+  { key: 'questionnaire', title: 'Fragebogen', subtitle: 'Hier fängt alles an', icon: '📝', active: false },
   { key: 'trackli', title: 'Trackli', subtitle: 'Zykluskalender nach Sensiplan', icon: '🌙', active: true },
   { key: 'dates', title: 'Spaß-Dates', subtitle: 'Ideen für gemeinsame Zeit', icon: '🎈', active: true },
   { key: 'sexy', title: 'Sexy Time', subtitle: 'Nur für euch zwei', icon: '🔥', active: false },
