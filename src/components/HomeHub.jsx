@@ -15,9 +15,16 @@ export default function HomeHub({ user, onOpen, onAccount }) {
 
   return (
     <div className="screen hub">
-      <h1 className="hub-greeting">
-        Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
-      </h1>
+      <div className="hub-head">
+        <h1 className="hub-greeting">
+          Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
+        </h1>
+        {isCloudConfigured && user && (
+          <button type="button" className="hub-account" onClick={onAccount}>
+            Konto
+          </button>
+        )}
+      </div>
 
       {isCloudConfigured && !user && (
         <button type="button" className="card hub-login" onClick={onAccount}>
