@@ -37,18 +37,44 @@ export async function getUser() {
   return session?.user ?? null;
 }
 
-// Konten werden nicht in der App angelegt, sondern von der Admin im
-// Supabase-Dashboard (Authentication → Add user); das Paar bekommt die
-// Zugangsdaten direkt. Die Namen des Paares (sie + er) liegen in den
-// user_metadata des Kontos und werden nach dem ersten Login über ⚙️ gesetzt.
+// ── Benutzername statt E-Mail ────────────────────────────────────────────────
+// Supabase braucht intern eine E-Mail. Paare melden sich aber nur mit
+// Benutzername an – daraus wird still eine technische Adresse gebildet, an die
+// nie etwas verschickt wird. Enthält die Eingabe ein „@“ (z. B. das Admin-
+// Konto), wird sie unverändert als E-Mail benutzt.
+const LOGIN_DOMAIN = 'users.trackli.app';
+
+export const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
+
+export function normalizeUsername(name) {
+  return name.trim().toLowerCase();
+}
+
+export function loginToEmail(login) {
+  const v = login.trim().toLowerCase();
+  return v.includes('@') ? v : `${v}@${LOGIN_DOMAIN}`;
+}
+
+// Anzeigename des Kontos: Benutzername, sonst die E-Mail (Alt-/Admin-Konten).
+export function displayLogin(emailOrUser) {
+  const email = typeof emailOrUser === 'string' ? emailOrUser : emailOrUser?.email;
+  if (!email) return '';
+  return email.endsWith('@' + LOGIN_DOMAIN) ? email.slice(0, -(LOGIN_DOMAIN.length + 1)) : email;
+}
+
+// Die Namen des Paares (sie + er) liegen in den user_metadata des Kontos.
 export function getCoupleNames(user) {
   const meta = user?.user_metadata ?? {};
   return { her: meta.her_name?.trim() || '', him: meta.his_name?.trim() || '' };
 }
 
-export async function signIn(email, password) {
+// login = Benutzername (oder E-Mail beim Admin-Konto).
+export async function signIn(login, password) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: loginToEmail(login),
+    password,
+  });
   if (error) throw error;
   return data;
 }
@@ -58,13 +84,74 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-// Schickt eine „Passwort zurücksetzen"-E-Mail. Der Link darin führt zurück in
-// die App (redirectTo); dort feuert dann ein PASSWORD_RECOVERY-Ereignis, worauf
-// der Nutzer ein neues Passwort setzen kann.
-export async function sendPasswordReset(email) {
+// ── Zugangscodes ─────────────────────────────────────────────────────────────
+// Registrieren geht nur mit einem Code von der Admin. Die eigentliche Sperre
+// sitzt in Supabase (Trigger redeem_invite_code, siehe supabase-setup.sql);
+// die Vorab-Prüfung hier ist nur für eine freundliche Rückmeldung.
+export function normalizeCode(code) {
+  return code.trim().toUpperCase();
+}
+
+export async function checkInviteCode(code) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
-  const redirectTo = window.location.origin + window.location.pathname;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const { data, error } = await supabase.rpc('invite_code_valid', { p_code: normalizeCode(code) });
+  if (error) throw error;
+  return data === true;
+}
+
+// Legt mit einem Zugangscode das Konto an und meldet direkt an.
+export async function redeemInviteCode({ code, username, password, her, him }) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const name = normalizeUsername(username);
+  const { data, error } = await supabase.auth.signUp({
+    email: loginToEmail(name),
+    password,
+    options: {
+      data: {
+        invite_code: normalizeCode(code),
+        username: name,
+        her_name: her.trim(),
+        his_name: him.trim(),
+      },
+    },
+  });
+  if (error) throw error;
+  // Ohne Session ist in Supabase noch „Confirm email“ aktiv – dann gleich
+  // anmelden versuchen, damit die Fehlermeldung verständlich wird.
+  if (!data.session) await signIn(name, password);
+  return data;
+}
+
+// Nur Admin (RLS): alle Codes, neueste zuerst.
+export async function listInviteCodes() {
+  if (!isCloudConfigured) return [];
+  const { data, error } = await supabase
+    .from('invite_codes')
+    .select('code, created_at, used_at, used_by')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Ohne leicht verwechselbare Zeichen (0/O, 1/I/L).
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+export async function createInviteCode() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+  const { error } = await supabase.from('invite_codes').insert({ code });
+  if (error) throw error;
+  return code;
+}
+
+export async function deleteInviteCode(code) {
+  const { error } = await supabase.from('invite_codes').delete().eq('code', code);
+  if (error) throw error;
+}
+
+// Nur Admin: Passwort eines Kontos neu setzen (es gibt keine Reset-E-Mail).
+export async function adminSetPassword(userId, password) {
+  const { error } = await supabase.rpc('admin_set_password', { p_user: userId, p_password: password });
   if (error) throw error;
 }
 

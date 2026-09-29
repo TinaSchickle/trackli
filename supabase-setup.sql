@@ -196,3 +196,95 @@ create policy "fun dates sind privat"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.fun_dates_done to authenticated;
+
+-- ── Zugangscodes (Registrierung nur mit Code von der Admin) ─────────────────
+-- Konten entstehen ausschließlich über einen einmaligen Zugangscode. Das Paar
+-- gibt Code, Namen, Benutzername und Passwort in der App ein; die App legt das
+-- Konto per signUp an (technische E-Mail: <benutzername>@users.trackli.app,
+-- dorthin wird nie etwas verschickt). Der Trigger unten lässt einen neuen
+-- Nutzer nur zu, wenn ein gültiger, unbenutzter Code mitkommt, und entwertet
+-- ihn dabei – ohne Code (auch über „Add user“ im Dashboard) geht nichts.
+--
+-- Supabase-Einstellungen dafür (Authentication → Sign In / Providers → Email):
+--   „Allow new users to sign up“  = AN  (der Trigger ist die Sperre)
+--   „Confirm email“               = AUS (es gibt keine echte E-Mail)
+create table if not exists public.invite_codes (
+  code        text primary key,
+  created_at  timestamptz not null default now(),
+  used_at     timestamptz,
+  used_by     uuid          -- bewusst ohne FK: wird im BEFORE-Trigger gesetzt
+);
+
+alter table public.invite_codes enable row level security;
+
+drop policy if exists "invite codes nur admin" on public.invite_codes;
+create policy "invite codes nur admin"
+  on public.invite_codes
+  for all
+  using (lower(auth.jwt() ->> 'email') = 'tina.schickle@gmx.de')
+  with check (lower(auth.jwt() ->> 'email') = 'tina.schickle@gmx.de');
+
+grant select, insert, update, delete on public.invite_codes to authenticated;
+
+-- Vorab-Prüfung in der App („Code ok?“), bevor Namen/Passwort abgefragt werden.
+create or replace function public.invite_code_valid(p_code text)
+returns boolean
+language sql
+security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.invite_codes
+    where code = upper(trim(p_code)) and used_at is null
+  );
+$$;
+
+grant execute on function public.invite_code_valid(text) to anon, authenticated;
+
+-- Die eigentliche Sperre: jeder neue auth-User braucht einen gültigen Code.
+create or replace function public.redeem_invite_code()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_code text := upper(trim(coalesce(new.raw_user_meta_data ->> 'invite_code', '')));
+begin
+  update public.invite_codes
+     set used_at = now(), used_by = new.id
+   where code = v_code and used_at is null;
+  if not found then
+    raise exception 'INVALID_INVITE_CODE';
+  end if;
+  new.raw_user_meta_data := new.raw_user_meta_data - 'invite_code';
+  return new;
+end;
+$$;
+
+drop trigger if exists before_auth_user_created on auth.users;
+create trigger before_auth_user_created
+  before insert on auth.users
+  for each row execute function public.redeem_invite_code();
+
+-- Passwort zurücksetzen durch die Admin (es gibt keine E-Mail für einen
+-- Reset-Link). Prüft selbst, dass die Aufruferin Admin ist.
+create or replace function public.admin_set_password(p_user uuid, p_password text)
+returns void
+language plpgsql
+security definer set search_path = public, extensions
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') <> 'tina.schickle@gmx.de' then
+    raise exception 'NOT_ADMIN';
+  end if;
+  if length(coalesce(p_password, '')) < 6 then
+    raise exception 'PASSWORD_TOO_SHORT';
+  end if;
+  update auth.users
+     set encrypted_password = crypt(p_password, gen_salt('bf')),
+         updated_at = now()
+   where id = p_user;
+end;
+$$;
+
+revoke execute on function public.admin_set_password(uuid, text) from public, anon;
+grant execute on function public.admin_set_password(uuid, text) to authenticated;

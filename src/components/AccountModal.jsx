@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
 import {
-  signIn,
   signOut,
   isAdmin,
-  sendPasswordReset,
   updatePassword,
   getCoupleNames,
   updateCoupleNames,
+  displayLogin,
 } from '../cloud/auth.js';
 import {
   isPushSupported,
@@ -19,6 +18,7 @@ import {
   setReminderTime,
 } from '../cloud/push.js';
 import InfoToggle from './InfoToggle.jsx';
+import LoginPanel from './LoginPanel.jsx';
 
 const REMINDER_MODULES_INFO =
   'Geprüft werden alle nicht deaktivierten Module: Temperatur, Zervixschleim, Muttermund, Spucke-Test.';
@@ -49,7 +49,6 @@ export default function AccountModal({
   onRecoveryDone,
   onClose,
 }) {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [herName, setHerName] = useState('');
   const [hisName, setHisName] = useState('');
@@ -57,7 +56,6 @@ export default function AccountModal({
   const [namesInfo, setNamesInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [info, setInfo] = useState(null);
   const [reminderOn, setReminderOn] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState(null);
@@ -148,20 +146,6 @@ export default function AccountModal({
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
-    setBusy(true);
-    try {
-      await signIn(email.trim(), password);
-    } catch (err) {
-      setError(humanError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function handleSignOut() {
     setBusy(true);
     try {
@@ -171,33 +155,10 @@ export default function AccountModal({
     }
   }
 
-  // „Passwort vergessen": Zurücksetzen-E-Mail anfordern.
-  async function handleForgot() {
-    setError(null);
-    setInfo(null);
-    const mail = email.trim();
-    if (!mail) {
-      setError('Bitte zuerst deine E-Mail oben eingeben.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await sendPasswordReset(mail);
-      setInfo(
-        'Wir haben dir eine E-Mail geschickt. Öffne den Link darin, um ein neues Passwort zu setzen.'
-      );
-    } catch (err) {
-      setError(humanError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   // Nach Rückkehr über den Zurücksetzen-Link: neues Passwort speichern.
   async function handleNewPassword(e) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
     setBusy(true);
     try {
       await updatePassword(password);
@@ -257,7 +218,7 @@ export default function AccountModal({
         {isCloudConfigured && user && !recovery && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
-              Angemeldet als <strong>{user.email}</strong>
+              Angemeldet als <strong>{displayLogin(user)}</strong>
               {isAdmin(user) && ' (Administrator)'}.
             </p>
             <div
@@ -379,69 +340,7 @@ export default function AccountModal({
           </>
         )}
 
-        {isCloudConfigured && !user && !recovery && (
-          <>
-            <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
-              Melde dich mit den Zugangsdaten an, die du bekommen hast.
-            </p>
-            <form onSubmit={handleSubmit}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
-                E-Mail
-              </label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ width: '100%', marginBottom: 12, boxSizing: 'border-box' }}
-              />
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
-                Passwort
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ width: '100%', marginBottom: 14, boxSizing: 'border-box' }}
-              />
-              {error && (
-                <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 0 }}>
-                  {error}
-                </p>
-              )}
-              {info && (
-                <p style={{ color: 'var(--color-text-soft)', fontSize: '0.85rem', marginTop: 0 }}>
-                  {info}
-                </p>
-              )}
-              <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
-                {busy ? 'Bitte warten…' : 'Anmelden'}
-              </button>
-              <button
-                  type="button"
-                  onClick={handleForgot}
-                  disabled={busy}
-                  style={{
-                    display: 'block',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    marginBottom: 12,
-                    color: 'var(--color-text-soft)',
-                    fontSize: '0.85rem',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Passwort vergessen?
-                </button>
-            </form>
-          </>
-        )}
+        {isCloudConfigured && !user && !recovery && <LoginPanel />}
 
         <button
           className="btn-secondary"

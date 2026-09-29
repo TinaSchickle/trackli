@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAllEntries, deleteEntry, syncNow, prepareLocalDataForUser, releaseLocalData } from './db.js';
 import { isCloudConfigured } from './cloud/supabase.js';
-import { getUser, onAuthChange, isAdmin } from './cloud/auth.js';
+import { getUser, onAuthChange, isAdmin, displayLogin } from './cloud/auth.js';
 import { syncSubscription } from './cloud/push.js';
 import { segmentIntoCycles } from './utils/cycles.js';
 import { todayIso } from './utils/dates.js';
@@ -273,7 +273,7 @@ export default function App() {
         </div>
         <button
           onClick={() => setShowAccount(true)}
-          title={user ? `Angemeldet: ${user.email} · Konto & Abmelden` : 'Anmelden · Konto & Sync'}
+          title={user ? `Angemeldet: ${displayLogin(user)} · Konto & Abmelden` : 'Anmelden · Konto & Sync'}
           aria-label={user ? 'Konto – angemeldet, hier abmelden' : 'Anmelden'}
           style={{
             display: 'inline-flex',
