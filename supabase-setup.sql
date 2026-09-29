@@ -174,3 +174,25 @@ grant select, insert, update, delete on public.notification_settings to authenti
 grant select on public.entries to service_role;
 grant select, delete on public.push_subscriptions to service_role;
 grant select on public.notification_settings to service_role;
+
+-- ── Spaß-Dates: erledigte Dates ──────────────────────────────────────────────
+-- Welche Date-Karten ein Konto schon „gemacht“ hat (werden dann aufgedeckt an
+-- der Pinnwand gezeigt). Die Karten selbst stehen im Code (src/funDates/cards.js),
+-- hier liegt nur ihre ID.
+create table if not exists public.fun_dates_done (
+  user_id  uuid        not null references auth.users (id) on delete cascade,
+  card_id  text        not null,
+  done_at  timestamptz not null default now(),
+  primary key (user_id, card_id)
+);
+
+alter table public.fun_dates_done enable row level security;
+
+drop policy if exists "fun dates sind privat" on public.fun_dates_done;
+create policy "fun dates sind privat"
+  on public.fun_dates_done
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.fun_dates_done to authenticated;

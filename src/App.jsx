@@ -18,6 +18,7 @@ import AccountModal from './components/AccountModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
 import Nav, { TABS, visibleTabs } from './components/Nav.jsx';
 import HomeHub from './components/HomeHub.jsx';
+import FunDates from './components/FunDates.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -25,7 +26,7 @@ const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
 export default function App() {
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  // Startseite mit Kacheln ('home') oder ein geöffneter Bereich ('trackli').
+  // Startseite mit Kacheln ('home') oder ein geöffneter Bereich ('trackli', 'dates').
   const [view, setView] = useState('home');
   const [tab, setTab] = useState('entry');
   const [selectedDate, setSelectedDate] = useState(todayIso());
@@ -231,6 +232,15 @@ export default function App() {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
         <HomeHub user={user} onOpen={setView} onAccount={() => setShowAccount(true)} />
+        {accountModal}
+      </div>
+    );
+  }
+
+  if (view === 'dates') {
+    return (
+      <div className="app-shell" style={{ paddingBottom: 20 }}>
+        <FunDates user={user} onHome={() => setView('home')} />
         {accountModal}
       </div>
     );

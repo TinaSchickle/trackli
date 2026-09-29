@@ -1416,7 +1416,7 @@ textarea:focus-visible {
 
 /* Startseite (Dashboard mit Kacheln) */
 .hub {
-  padding-top: 36px;
+  padding-top: 64px;
 }
 
 .hub-greeting {
@@ -1428,20 +1428,35 @@ textarea:focus-visible {
   color: var(--color-period);
 }
 
-.hub-login {
-  display: block;
-  width: 100%;
-  text-align: left;
-  margin-bottom: 20px;
+.hub {
+  position: relative;
+}
+
+.hub-topbar {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+}
+
+.hub-account {
+  padding: 7px 14px;
+  border-radius: 999px;
   border: 1px solid var(--color-line);
   background: var(--color-surface);
   color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
-.hub-login div {
-  color: var(--color-text-soft);
-  font-size: 0.9rem;
-  margin-top: 4px;
+.hub-account.is-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hub-grid {
@@ -1494,4 +1509,379 @@ textarea:focus-visible {
   opacity: 0.5;
   box-shadow: none;
   background: transparent;
+}
+
+/* ── Spaß-Dates: Kork-Pinnwand mit Memory-Karten ─────────────────────────── */
+.fd-back {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 20px 0 6px;
+  color: var(--color-rauchblau-dark);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.fd-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.fd-legend > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.fd-go {
+  margin-bottom: 14px;
+}
+
+.fd-board {
+  position: relative;
+  min-height: 360px;
+  padding: 26px 16px 22px;
+  border: 14px solid #7a4f2c;
+  border-radius: 10px;
+  background-color: #c8965e;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(90, 55, 25, 0.35) 0 1.2px, transparent 1.6px),
+    radial-gradient(circle at 70% 60%, rgba(255, 230, 190, 0.35) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 45% 80%, rgba(90, 55, 25, 0.25) 0 1.6px, transparent 2px);
+  background-size: 11px 13px, 9px 7px, 17px 15px;
+  box-shadow:
+    inset 0 0 26px rgba(60, 35, 15, 0.45),
+    0 6px 18px rgba(58, 50, 44, 0.25);
+  overflow: hidden;
+}
+
+.fd-board-empty {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+}
+
+.fd-banner {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #fffaf2;
+  text-align: center;
+  transform: rotate(-12deg);
+  text-shadow: 0 2px 0 rgba(60, 35, 15, 0.5), 0 4px 12px rgba(60, 35, 15, 0.35);
+  padding: 6px 18px;
+  background: rgba(162, 80, 60, 0.85);
+  box-shadow: 0 4px 10px rgba(60, 35, 15, 0.35);
+}
+
+.fd-board-empty .fd-go {
+  width: auto;
+  padding-left: 28px;
+  padding-right: 28px;
+  margin: 0;
+}
+
+.fd-note {
+  background: #fff7b8;
+  color: var(--color-text);
+  padding: 16px 18px;
+  max-width: 240px;
+  text-align: center;
+  transform: rotate(-3deg);
+  box-shadow: 0 4px 10px rgba(60, 35, 15, 0.35);
+}
+
+.fd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 18px;
+}
+
+.fd-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: none;
+  background: transparent;
+  perspective: 900px;
+  transform: rotate(var(--tilt));
+  animation: fd-deal 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.15) both;
+}
+
+@keyframes fd-deal {
+  from {
+    opacity: 0;
+    transform: translate(var(--from-x), var(--from-y)) rotate(var(--from-r)) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--tilt));
+  }
+}
+
+.fd-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff8a7a, #b3261e 60%, #7a1510);
+  box-shadow: 1px 3px 4px rgba(0, 0, 0, 0.45);
+}
+
+.fd-card-inner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+
+.fd-card.is-flipped .fd-card-inner {
+  transform: rotateY(180deg);
+}
+
+.fd-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 2px 5px 10px rgba(50, 30, 10, 0.4);
+}
+
+.fd-back-face {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.14) 0 6px, transparent 6px 12px),
+    var(--color-ton);
+  border: 4px solid #fffaf2;
+  color: #fffaf2;
+}
+
+.fd-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.fd-icons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.fd-back-face .fd-icons {
+  background: rgba(255, 250, 242, 0.92);
+  color: var(--color-text);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.fd-front-face {
+  transform: rotateY(180deg);
+  background: #fffaf2;
+  color: var(--color-text);
+  justify-content: flex-start;
+  padding-top: 14px;
+}
+
+.fd-placeholder {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--color-muschel);
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  border-radius: 4px;
+}
+
+.fd-cover {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.fd-card-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.fd-done-stamp {
+  position: absolute;
+  top: 14px;
+  right: -4px;
+  padding: 2px 8px;
+  background: #2f7d4f;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 3px;
+  transform: rotate(8deg);
+}
+
+.fd-stack {
+  position: relative;
+  height: 300px;
+}
+
+.fd-stack-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 110px;
+  height: 146px;
+  margin: -73px 0 0 -55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  border-radius: 6px;
+  border: 4px solid #fffaf2;
+  background: var(--color-ton);
+  box-shadow: 2px 5px 10px rgba(50, 30, 10, 0.4);
+  animation: fd-shuffle 0.45s ease-in-out 2 alternate;
+}
+
+.fd-stack-card:nth-child(odd) {
+  animation-name: fd-shuffle-alt;
+}
+
+@keyframes fd-shuffle {
+  from { transform: translateX(0) rotate(0); }
+  to { transform: translateX(70px) rotate(12deg); }
+}
+
+@keyframes fd-shuffle-alt {
+  from { transform: translateX(0) rotate(0); }
+  to { transform: translateX(-70px) rotate(-12deg); }
+}
+
+.fd-quiz-step {
+  font-size: 0.78rem;
+  color: var(--color-text-soft);
+  margin-bottom: 4px;
+}
+
+.fd-quiz-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+
+.fd-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.fd-chip.is-on {
+  background: var(--color-ton);
+  border-color: var(--color-ton);
+  color: #fff;
+}
+
+.fd-detail-title {
+  font-size: 1.5rem;
+  margin-top: 6px;
+}
+
+.fd-detail .fd-icons {
+  margin-bottom: 8px;
+}
+
+.fd-intro {
+  color: var(--color-text-soft);
+  margin: 0 0 14px;
+}
+
+.fd-hero {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.fd-hero .fd-placeholder {
+  height: 100%;
+  font-size: 0.85rem;
+}
+
+.fd-section {
+  margin-bottom: 16px;
+}
+
+.fd-section ul,
+.fd-steps {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.fd-section li {
+  margin-bottom: 6px;
+}
+
+.fd-steps li.is-soon {
+  color: var(--color-text-soft);
+}
+
+.fd-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-muschel);
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.fd-error {
+  color: var(--color-danger, #b3261e);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-card,
+  .fd-stack-card {
+    animation: none;
+  }
+  .fd-card-inner {
+    transition: none;
+  }
 }

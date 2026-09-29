@@ -5,7 +5,7 @@ import { isCloudConfigured } from '../cloud/supabase.js';
 // solange `active` false ist, wird die Kachel ausgegraut als „Bald" gezeigt.
 export const HUB_TILES = [
   { key: 'trackli', title: 'Trackli', subtitle: 'Zykluskalender nach Sensiplan', icon: '🌙', active: true },
-  { key: 'dates', title: 'Spaß-Dates', subtitle: 'Ideen für gemeinsame Zeit', icon: '🎈', active: false },
+  { key: 'dates', title: 'Spaß-Dates', subtitle: 'Ideen für gemeinsame Zeit', icon: '🎈', active: true },
   { key: 'sexy', title: 'Sexy Time', subtitle: 'Nur für euch zwei', icon: '🔥', active: false },
 ];
 
@@ -15,23 +15,31 @@ export default function HomeHub({ user, onOpen, onAccount }) {
 
   return (
     <div className="screen hub">
-      <div className="hub-head">
-        <h1 className="hub-greeting">
-          Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
-        </h1>
-        {isCloudConfigured && user && (
-          <button type="button" className="hub-account" onClick={onAccount}>
-            Konto
-          </button>
-        )}
-      </div>
-
-      {isCloudConfigured && !user && (
-        <button type="button" className="card hub-login" onClick={onAccount}>
-          <strong>Anmelden</strong>
-          <div>Melde dich an, um alle Bereiche zu nutzen.</div>
-        </button>
+      {/* Oben rechts: Zahnrad (Konto) bzw. „Einloggen“. Der Dialog dahinter
+          bietet Anmelden und Registrieren an. */}
+      {isCloudConfigured && (
+        <div className="hub-topbar">
+          {user ? (
+            <button
+              type="button"
+              className="hub-account is-icon"
+              onClick={onAccount}
+              aria-label="Konto & Einstellungen"
+              title="Konto & Einstellungen"
+            >
+              ⚙️
+            </button>
+          ) : (
+            <button type="button" className="hub-account" onClick={onAccount}>
+              Einloggen
+            </button>
+          )}
+        </div>
       )}
+
+      <h1 className="hub-greeting">
+        Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
+      </h1>
 
       <div className="hub-grid">
         {HUB_TILES.map((t) => (
