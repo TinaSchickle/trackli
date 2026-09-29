@@ -1959,3 +1959,16 @@ textarea:focus-visible {
     transition: none;
   }
 }
+
+.hub-hint {
+  display: block;
+  width: 100%;
+  margin: -8px 0 20px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius);
+}

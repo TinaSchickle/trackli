@@ -41,6 +41,12 @@ export default function HomeHub({ user, onOpen, onAccount }) {
         Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
       </h1>
 
+      {isCloudConfigured && user && !names && (
+        <button type="button" className="hub-hint" onClick={onAccount}>
+          Tragt über ⚙️ eure Namen ein, dann begrüßen wir euch persönlich.
+        </button>
+      )}
+
       <div className="hub-grid">
         {HUB_TILES.map((t) => (
           <button

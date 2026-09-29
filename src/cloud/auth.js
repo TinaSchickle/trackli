@@ -37,22 +37,13 @@ export async function getUser() {
   return session?.user ?? null;
 }
 
-// Namen des Paares (sie + er) liegen in den user_metadata des Kontos. So
-// braucht es keine eigene Tabelle – und sie kommen mit jeder Sitzung mit.
+// Konten werden nicht in der App angelegt, sondern von der Admin im
+// Supabase-Dashboard (Authentication → Add user); das Paar bekommt die
+// Zugangsdaten direkt. Die Namen des Paares (sie + er) liegen in den
+// user_metadata des Kontos und werden nach dem ersten Login über ⚙️ gesetzt.
 export function getCoupleNames(user) {
   const meta = user?.user_metadata ?? {};
   return { her: meta.her_name?.trim() || '', him: meta.his_name?.trim() || '' };
-}
-
-export async function signUp(email, password, { her, him } = {}) {
-  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { her_name: her?.trim() || '', his_name: him?.trim() || '' } },
-  });
-  if (error) throw error;
-  return data;
 }
 
 export async function signIn(email, password) {

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
 import {
   signIn,
-  signUp,
   signOut,
   isAdmin,
   sendPasswordReset,
@@ -50,7 +49,6 @@ export default function AccountModal({
   onRecoveryDone,
   onClose,
 }) {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [herName, setHerName] = useState('');
@@ -156,17 +154,7 @@ export default function AccountModal({
     setInfo(null);
     setBusy(true);
     try {
-      if (mode === 'signup') {
-        const { session } = await signUp(email.trim(), password, { her: herName, him: hisName });
-        // Ist E-Mail-Bestätigung aktiv, gibt es noch keine Session.
-        if (!session) {
-          setInfo('Konto angelegt. Bestätige den Link, den wir dir per E-Mail geschickt haben, und melde dich dann an.');
-          setMode('signin');
-        }
-        // Bei Erfolg mit Session übernimmt der Auth-Listener in App (Sync + Reload).
-      } else {
-        await signIn(email.trim(), password);
-      }
+      await signIn(email.trim(), password);
     } catch (err) {
       setError(humanError(err));
     } finally {
@@ -394,37 +382,9 @@ export default function AccountModal({
         {isCloudConfigured && !user && !recovery && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
-              {mode === 'signin'
-                ? 'Melde dich an, um deine Daten auf mehreren Geräten zu nutzen.'
-                : 'Lege ein Konto an. Deine bereits auf diesem Gerät gespeicherten Einträge werden dabei in die Cloud übernommen.'}
+              Melde dich mit den Zugangsdaten an, die du bekommen hast.
             </p>
             <form onSubmit={handleSubmit}>
-              {mode === 'signup' && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
-                    Ihr Name
-                    <input
-                      type="text"
-                      required
-                      autoComplete="off"
-                      value={herName}
-                      onChange={(e) => setHerName(e.target.value)}
-                      style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
-                    />
-                  </label>
-                  <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
-                    Sein Name
-                    <input
-                      type="text"
-                      required
-                      autoComplete="off"
-                      value={hisName}
-                      onChange={(e) => setHisName(e.target.value)}
-                      style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
-                    />
-                  </label>
-                </div>
-              )}
               <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
                 E-Mail
               </label>
@@ -443,7 +403,7 @@ export default function AccountModal({
                 type="password"
                 required
                 minLength={6}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ width: '100%', marginBottom: 14, boxSizing: 'border-box' }}
@@ -459,10 +419,9 @@ export default function AccountModal({
                 </p>
               )}
               <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
-                {busy ? 'Bitte warten…' : mode === 'signin' ? 'Anmelden' : 'Konto anlegen'}
+                {busy ? 'Bitte warten…' : 'Anmelden'}
               </button>
-              {mode === 'signin' && (
-                <button
+              <button
                   type="button"
                   onClick={handleForgot}
                   disabled={busy}
@@ -480,19 +439,7 @@ export default function AccountModal({
                 >
                   Passwort vergessen?
                 </button>
-              )}
             </form>
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                setMode(mode === 'signin' ? 'signup' : 'signin');
-                setError(null);
-                setInfo(null);
-              }}
-              style={{ width: '100%' }}
-            >
-              {mode === 'signin' ? 'Neues Konto anlegen' : 'Ich habe schon ein Konto'}
-            </button>
           </>
         )}
 
