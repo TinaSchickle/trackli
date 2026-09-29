@@ -18,6 +18,28 @@ const QUESTIONS = [
   { key: 'foods', title: 'Mit Essen oder ohne?', options: FOOD_OPTIONS },
 ];
 
+// Pinnwand-Deko: Nadelfarben, Post-it-Farben und -Sprüche.
+const PIN_COLORS = ['red', 'blue', 'brass', 'green', 'red'];
+const NOTE_COLORS = ['#fff27a', '#ffc4d6', '#bfe8ff', '#c8f2b8', '#ffd59e'];
+const NOTE_TEXTS = [
+  'Neues Abenteuer!',
+  'Handy weg!',
+  'Kuss nicht vergessen ♥',
+  'Nur wir zwei',
+  'Das wird lustig!',
+  'Wer verliert, spült 😜',
+  'Heute?',
+];
+// Hintergrund der „Fotos“ auf den verdeckten Karten.
+const PHOTO_BGS = [
+  'linear-gradient(160deg, #ffd9a0, #f49a6c)',
+  'linear-gradient(160deg, #bfe3f5, #7fb2d6)',
+  'linear-gradient(160deg, #d8f0c0, #8cc47a)',
+  'linear-gradient(160deg, #ffd1e0, #e889a8)',
+  'linear-gradient(160deg, #fff0a8, #f0c75a)',
+  'linear-gradient(160deg, #e2d4ff, #a58ee0)',
+];
+
 // So lange „mischen“ die Karten als Stapel, bevor sie verteilt werden.
 const SHUFFLE_MS = 900;
 // So lange dreht sich eine angeklickte Karte um, bevor die Date-Seite kommt.
@@ -37,6 +59,11 @@ const rand = (min, max) => min + Math.random() * (max - min);
 function faceFor(cardId) {
   const idx = CARDS.findIndex((c) => c.id === cardId);
   return FACES[idx % FACES.length];
+}
+
+function photoBgFor(cardId) {
+  const idx = CARDS.findIndex((c) => c.id === cardId);
+  return PHOTO_BGS[idx % PHOTO_BGS.length];
 }
 
 function CardIcons({ card }) {
@@ -227,6 +254,18 @@ export default function FunDates({ user, onHome }) {
     setDeck(
       matched.map((c) => ({
         id: c.id,
+        pin: PIN_COLORS[Math.floor(Math.random() * PIN_COLORS.length)],
+        pinX: rand(35, 65),
+        // Ungefähr jede zweite Karte bekommt einen Post-it an eine Ecke.
+        note:
+          Math.random() < 0.5
+            ? {
+                text: NOTE_TEXTS[Math.floor(Math.random() * NOTE_TEXTS.length)],
+                color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
+                corner: ['tl', 'tr', 'bl', 'br'][Math.floor(Math.random() * 4)],
+                tilt: rand(-12, 12),
+              }
+            : null,
         tilt: rand(-5, 5),
         fromX: rand(-160, 160),
         fromY: rand(-260, -80),
@@ -321,10 +360,21 @@ export default function FunDates({ user, onHome }) {
         </button>
       )}
 
+      <div className="fd-frame">
       <div className="fd-board">
         {!deck && (
           <div className="fd-board-empty">
-            <div className="fd-banner">May the Fun begin</div>
+            <span className="fd-sticky is-deco" style={{ '--note': '#fff27a', top: 18, left: 14, '--rot': '-8deg' }}>
+              <span className="fd-sticky-pin is-red" />Neues Abenteuer!
+            </span>
+            <span className="fd-sticky is-deco" style={{ '--note': '#ffc4d6', bottom: 20, right: 14, '--rot': '6deg' }}>
+              <span className="fd-sticky-pin is-blue" />Nur wir zwei ♥
+            </span>
+            <div className="fd-banner">
+              <span className="fd-tape is-left" />
+              May the Fun begin
+              <span className="fd-tape is-right" />
+            </div>
             <button type="button" className="btn-primary fd-go" onClick={() => setQuizOpen(true)}>
               Let's have fun 🎉
             </button>
@@ -370,27 +420,41 @@ export default function FunDates({ user, onHome }) {
                   onClick={() => handleCardClick(d.id)}
                   aria-label={done ? `${card.title} (schon gemacht)` : 'Verdeckte Date-Karte'}
                 >
-                  <span className="fd-pin" aria-hidden="true" />
+                  <span className={`fd-pin is-${d.pin}`} style={{ left: `${d.pinX}%` }} aria-hidden="true" />
                   <span className="fd-card-inner">
                     <span className="fd-face fd-back-face">
-                      <span className="fd-emoji" aria-hidden="true">{faceFor(d.id)}</span>
-                      <CardIcons card={card} />
+                      <span className="fd-photo" style={{ background: photoBgFor(d.id) }}>
+                        <span className="fd-emoji" aria-hidden="true">{faceFor(d.id)}</span>
+                      </span>
+                      <span className="fd-caption"><CardIcons card={card} /></span>
                     </span>
                     <span className="fd-face fd-front-face">
-                      {card.cover ? (
-                        <img src={card.cover} alt="" className="fd-cover" />
-                      ) : (
-                        <PlaceholderImage />
-                      )}
-                      <span className="fd-card-title">{card.title}</span>
+                      <span className="fd-photo">
+                        {card.cover ? (
+                          <img src={card.cover} alt="" className="fd-cover" />
+                        ) : (
+                          <PlaceholderImage />
+                        )}
+                      </span>
+                      <span className="fd-caption fd-card-title">{card.title}</span>
                       {done && <span className="fd-done-stamp">✓ gemacht</span>}
                     </span>
                   </span>
+                  {d.note && (
+                    <span
+                      className={`fd-sticky is-${d.note.corner}`}
+                      style={{ '--note': d.note.color, '--rot': `${d.note.tilt}deg` }}
+                      aria-hidden="true"
+                    >
+                      {d.note.text}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         )}
+      </div>
       </div>
 
       {loadError && <p className="fd-error">{loadError}</p>}
