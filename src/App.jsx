@@ -17,6 +17,7 @@ import BackupModal from './components/BackupModal.jsx';
 import AccountModal from './components/AccountModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
 import Nav, { TABS, visibleTabs } from './components/Nav.jsx';
+import HomeHub from './components/HomeHub.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -24,6 +25,8 @@ const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
 export default function App() {
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Startseite mit Kacheln ('home') oder ein geöffneter Bereich ('trackli').
+  const [view, setView] = useState('home');
   const [tab, setTab] = useState('entry');
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [showBackup, setShowBackup] = useState(false);
@@ -107,6 +110,10 @@ export default function App() {
         const prevId = prevUserIdRef.current;
         prevUserIdRef.current = u?.id ?? null;
         setUser(u);
+        // Echtes An- bzw. Abmelden führt immer zurück auf die Startseite. (Nicht
+        // bei jedem SIGNED_IN – Supabase meldet das auch beim Zurückkehren in den
+        // Tab erneut, das soll niemanden aus Trackli werfen.)
+        if (prevId !== undefined && Boolean(u) !== Boolean(prevId)) setView('home');
         if (u) {
           // Nach erfolgreicher Anmeldung den Konto-Dialog automatisch schließen,
           // damit er nicht ungefragt offen bleibt. Beim Passwort-Zurücksetzen
@@ -165,6 +172,7 @@ export default function App() {
   // Eisprung-Popup: sobald die doppelte Kontrolle des aktuellen Zyklus erfüllt
   // ist und der Nutzer im Eintrag-Tab ist (einmalig pro Zyklus, bis verworfen).
   const showOvModal =
+    view === 'trackli' &&
     activeTab === 'entry' &&
     !!currentCycle?.evaluation?.complete &&
     ovDismissed !== currentCycle.id;
@@ -204,6 +212,30 @@ export default function App() {
     );
   }
 
+  const accountModal = showAccount && (
+    <AccountModal
+      user={user}
+      syncing={syncing}
+      lastSyncAt={lastSyncAt}
+      syncError={syncError}
+      recovery={recovery}
+      onRecoveryDone={() => setRecovery(false)}
+      onClose={() => {
+        setShowAccount(false);
+        setRecovery(false);
+      }}
+    />
+  );
+
+  if (view === 'home') {
+    return (
+      <div className="app-shell" style={{ paddingBottom: 20 }}>
+        <HomeHub user={user} onOpen={setView} onAccount={() => setShowAccount(true)} />
+        {accountModal}
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header
@@ -211,6 +243,21 @@ export default function App() {
         style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}
       >
         <div>
+          <button
+            type="button"
+            onClick={() => setView('home')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              marginBottom: 6,
+              color: 'var(--color-rauchblau-dark)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+            }}
+          >
+            ← Übersicht
+          </button>
           <div className="eyebrow">NFP nach Sensiplan</div>
           <h1 style={{ fontSize: '1.4rem' }}>Zykluskalender · {TAB_LABELS[activeTab]}</h1>
         </div>
@@ -323,20 +370,7 @@ export default function App() {
 
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
 
-      {showAccount && (
-        <AccountModal
-          user={user}
-          syncing={syncing}
-          lastSyncAt={lastSyncAt}
-          syncError={syncError}
-          recovery={recovery}
-          onRecoveryDone={() => setRecovery(false)}
-          onClose={() => {
-            setShowAccount(false);
-            setRecovery(false);
-          }}
-        />
-      )}
+      {accountModal}
 
       {showOvModal && (
         <OvulationModal

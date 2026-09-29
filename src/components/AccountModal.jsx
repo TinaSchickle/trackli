@@ -7,6 +7,8 @@ import {
   isAdmin,
   sendPasswordReset,
   updatePassword,
+  getCoupleNames,
+  updateCoupleNames,
 } from '../cloud/auth.js';
 import {
   isPushSupported,
@@ -51,6 +53,10 @@ export default function AccountModal({
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [herName, setHerName] = useState('');
+  const [hisName, setHisName] = useState('');
+  const [namesSaving, setNamesSaving] = useState(false);
+  const [namesInfo, setNamesInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
@@ -64,6 +70,29 @@ export default function AccountModal({
   const [reminderTime, setReminderTimeState] = useState({ hour: 20, minute: 0 });
   const [savedReminderTime, setSavedReminderTime] = useState({ hour: 20, minute: 0 });
   const [reminderTimeSaving, setReminderTimeSaving] = useState(false);
+
+  // Namensfelder für angemeldete Konten mit den gespeicherten Namen vorbelegen.
+  useEffect(() => {
+    if (user) {
+      const { her, him } = getCoupleNames(user);
+      setHerName(her);
+      setHisName(him);
+    }
+  }, [user]);
+
+  async function handleSaveNames(e) {
+    e.preventDefault();
+    setNamesInfo(null);
+    setNamesSaving(true);
+    try {
+      await updateCoupleNames({ her: herName, him: hisName });
+      setNamesInfo('Gespeichert.');
+    } catch (err) {
+      setNamesInfo(humanError(err));
+    } finally {
+      setNamesSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (isCloudConfigured && user) {
@@ -128,7 +157,7 @@ export default function AccountModal({
     setBusy(true);
     try {
       if (mode === 'signup') {
-        const { session } = await signUp(email.trim(), password);
+        const { session } = await signUp(email.trim(), password, { her: herName, him: hisName });
         // Ist E-Mail-Bestätigung aktiv, gibt es noch keine Session.
         if (!session) {
           setInfo('Konto angelegt. Bestätige den Link, den wir dir per E-Mail geschickt haben, und melde dich dann an.');
@@ -258,6 +287,46 @@ export default function AccountModal({
                     ? `Zuletzt synchronisiert: ${new Date(lastSyncAt).toLocaleString('de-DE')}`
                     : 'Noch nicht synchronisiert.'}
             </div>
+            <form onSubmit={handleSaveNames} style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
+                  Ihr Name
+                  <input
+                    type="text"
+                    required
+                    value={herName}
+                    onChange={(e) => setHerName(e.target.value)}
+                    style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
+                  />
+                </label>
+                <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
+                  Sein Name
+                  <input
+                    type="text"
+                    required
+                    value={hisName}
+                    onChange={(e) => setHisName(e.target.value)}
+                    style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
+                  />
+                </label>
+              </div>
+              {(herName.trim() !== getCoupleNames(user).her ||
+                hisName.trim() !== getCoupleNames(user).him) && (
+                <button
+                  type="submit"
+                  className="btn-secondary"
+                  disabled={namesSaving}
+                  style={{ marginTop: 8, fontSize: '0.8rem', padding: '2px 8px' }}
+                >
+                  {namesSaving ? 'Speichert…' : 'Namen speichern'}
+                </button>
+              )}
+              {namesInfo && (
+                <p style={{ color: 'var(--color-text-soft)', fontSize: '0.85rem', margin: '6px 0 0' }}>
+                  {namesInfo}
+                </p>
+              )}
+            </form>
             {isPushConfigured && (
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.9rem' }}>
@@ -330,6 +399,32 @@ export default function AccountModal({
                 : 'Lege ein Konto an. Deine bereits auf diesem Gerät gespeicherten Einträge werden dabei in die Cloud übernommen.'}
             </p>
             <form onSubmit={handleSubmit}>
+              {mode === 'signup' && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
+                    Ihr Name
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={herName}
+                      onChange={(e) => setHerName(e.target.value)}
+                      style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
+                    />
+                  </label>
+                  <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
+                    Sein Name
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={hisName}
+                      onChange={(e) => setHisName(e.target.value)}
+                      style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
+                    />
+                  </label>
+                </div>
+              )}
               <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 4 }}>
                 E-Mail
               </label>

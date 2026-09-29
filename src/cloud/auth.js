@@ -37,9 +37,20 @@ export async function getUser() {
   return session?.user ?? null;
 }
 
-export async function signUp(email, password) {
+// Namen des Paares (sie + er) liegen in den user_metadata des Kontos. So
+// braucht es keine eigene Tabelle – und sie kommen mit jeder Sitzung mit.
+export function getCoupleNames(user) {
+  const meta = user?.user_metadata ?? {};
+  return { her: meta.her_name?.trim() || '', him: meta.his_name?.trim() || '' };
+}
+
+export async function signUp(email, password, { her, him } = {}) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { her_name: her?.trim() || '', his_name: him?.trim() || '' } },
+  });
   if (error) throw error;
   return data;
 }
@@ -70,6 +81,15 @@ export async function sendPasswordReset(email) {
 export async function updatePassword(newPassword) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
   const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+// Ändert die Namen des Paares im angemeldeten Konto.
+export async function updateCoupleNames({ her, him }) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const { error } = await supabase.auth.updateUser({
+    data: { her_name: her.trim(), his_name: him.trim() },
+  });
   if (error) throw error;
 }
 
