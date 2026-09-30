@@ -64,6 +64,13 @@ export default function HomeHub({ user, allowedTiles, onOpen, onAccount }) {
         </button>
       )}
 
+      {/* Einstieg in die Live Sessions – noch nicht verfügbar, deshalb inaktiv. */}
+      <button type="button" className="hub-live-btn" disabled aria-disabled="true">
+        <span aria-hidden="true">🎙️</span>
+        <span className="hub-live-label">Zu den Live Sessions</span>
+        <span className="hub-live-soon">bald</span>
+      </button>
+
       <div className="hub-grid">
         {(allowedTiles === undefined
           ? []

@@ -2883,3 +2883,35 @@ textarea:focus-visible {
   .qn-bar-fill, .qn-now, .qn-confetti, .qn-celebrate-icon, .qn-q, .qn-done-row { animation: none; }
   .qn-confetti { display: none; }
 }
+
+/* Dashboard: „Zu den Live Sessions“ (vorerst inaktiv) */
+.hub-live-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: 1px dashed var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.hub-live-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.hub-live-soon {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-muschel);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
