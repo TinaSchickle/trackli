@@ -55,7 +55,7 @@ export default function HomeHub({ user, allowedTiles, onOpen, onAccount }) {
       )}
 
       <h1 className="hub-greeting">
-        Hi{names ? ` ${names}` : ''} <span className="hub-heart">&lt;3</span>
+        Hi{names ? ` ${names}` : ''} <span className="hub-heart" role="img" aria-label="Pärchen">💑</span>
       </h1>
 
       {isCloudConfigured && user && !names && (
