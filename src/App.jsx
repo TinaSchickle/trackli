@@ -24,6 +24,7 @@ import { LIVE_IDEAS } from './liveSessions/ideas.js';
 import { START_IDEAS } from './startpunkt/ideas.js';
 import Todos from './components/Todos.jsx';
 import GoodNight from './components/GoodNight.jsx';
+import ForHim from './components/ForHim.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -173,7 +174,7 @@ export default function App() {
       .then((tiles) => {
         if (!alive) return;
         setAllowedTiles(tiles);
-        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live', start: 'start', todos: 'todos', goodnight: 'goodnight' }[view];
+        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live', start: 'start', todos: 'todos', goodnight: 'goodnight', fuerihn: 'fuerihn' }[view];
         if (viewTile && tiles !== null && !tiles.includes(viewTile)) setView('home');
       })
       .catch(() => alive && setAllowedTiles([]));
@@ -257,6 +258,15 @@ export default function App() {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
         <HomeHub user={user} allowedTiles={allowedTiles} onOpen={setView} onAccount={() => setShowAccount(true)} />
+        {accountModal}
+      </div>
+    );
+  }
+
+  if (view === 'fuerihn') {
+    return (
+      <div className="app-shell" style={{ paddingBottom: 20 }}>
+        <ForHim user={user} cycles={cycles} onHome={() => setView('home')} />
         {accountModal}
       </div>
     );

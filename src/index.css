@@ -2326,3 +2326,50 @@ textarea:focus-visible {
   text-align: center;
   color: var(--color-text-soft);
 }
+
+/* Für Ihn: Slot mit ihrer aktuellen Zyklusphase */
+.fh-phase {
+  background: var(--color-muschel-light);
+  border: 1px solid var(--color-line);
+}
+
+.fh-phase-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.fh-phase-title {
+  font-family: var(--font-display);
+  color: var(--color-ton-dark);
+}
+
+.fh-phase-day {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.fh-badges {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+
+.fh-phase-name {
+  font-weight: 700;
+}
+
+.fh-text {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.fh-text:last-child {
+  margin-bottom: 0;
+}
+
+.fh-empty {
+  color: var(--color-text-soft);
+}

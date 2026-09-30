@@ -842,7 +842,7 @@ export function fertilityForecast(cycle, allCycles, dateIso) {
   let phaseKey;
   if (cycleDay <= 5) phaseKey = 'menstruation';
   else if (signToday || ovulation.kind === 'imminent' || inPeakWindow) phaseKey = 'ovulation';
-  else if ((ev?.complete && dateIso > ev.infertileFrom) || (dToOv != null && dToOv > 0)) phaseKey = 'luteal';
+  else if ((ev?.complete && dateIso > ev.infertileFrom) || (dToOv != null && dToOv < 0)) phaseKey = 'luteal';
   else phaseKey = 'follicular';
   const cyclePhase = { key: phaseKey, ...CYCLE_PHASES[phaseKey] };
 

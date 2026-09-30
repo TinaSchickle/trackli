@@ -107,6 +107,13 @@ describe('Fruchtbarkeits- & Eisprung-Prognose', () => {
     expect(f.phaseLabel).toBe('Hochfruchtbar');
   });
 
+  it('ordnet die Zyklusphase richtig herum zu (Follikel vor, Luteal nach dem Eisprung)', () => {
+    // Nur Periodenbeginn, keine Historie → Eisprung erwartet an Tag 14.
+    const [c] = segmentIntoCycles([{ id: 'x', date: '2026-01-01', isPeriodStart: true }]);
+    expect(fertilityForecast(c, [c], '2026-01-10').cyclePhase.key).toBe('follicular'); // Tag 10
+    expect(fertilityForecast(c, [c], '2026-01-25').cyclePhase.key).toBe('luteal'); // Tag 25
+  });
+
   it('nennt keinen Messmethoden-Zusatz mehr in der Eisprung-Info', () => {
     const f = fertilityForecast(c1, cycles, c1.entries[8].date);
     expect(f.ovulation.text).not.toMatch(/Temperatur|Schleim|Muttermund/);
