@@ -570,3 +570,28 @@ create policy "fragebogen ist privat"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.questionnaire_answers to authenticated;
+
+-- ── Good Night ───────────────────────────────────────────────────────────────
+-- Pro Konto und Abend genau eine gezogene Mini-Aufgabe. „evening“ ist das
+-- Datum des Abends (vor 5 Uhr früh zählt noch zum Vortag). Die Aufgaben
+-- selbst stehen im Code (src/goodNight/tasks.js). Wer zuerst zieht, gewinnt:
+-- der Primärschlüssel verhindert eine zweite Aufgabe am selben Abend.
+create table if not exists public.good_night_draws (
+  user_id   uuid        not null references auth.users (id) on delete cascade,
+  evening   date        not null,
+  task_id   text        not null,
+  done      boolean     not null default false,
+  drawn_at  timestamptz not null default now(),
+  primary key (user_id, evening)
+);
+
+alter table public.good_night_draws enable row level security;
+
+drop policy if exists "good night ist privat" on public.good_night_draws;
+create policy "good night ist privat"
+  on public.good_night_draws
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.good_night_draws to authenticated;

@@ -2337,9 +2337,9 @@ textarea:focus-visible {
   color: var(--color-text-soft);
 }
 
-/* Good Night: runder Zauber-Button mit Sparkles, danach die gezogene Aufgabe */
+/* Good Night: Mond-Button; nach 3 s ruhiger Lichtverwandlung erscheint die Aufgabe */
 .gn-stage {
-  min-height: 250px;
+  min-height: 280px;
   display: grid;
   place-items: center;
   margin: 8px 0 20px;
@@ -2349,40 +2349,83 @@ textarea:focus-visible {
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 16px;
+}
+
+.gn-orb {
+  position: relative;
+  width: 140px;
+  height: 140px;
 }
 
 .gn-magic {
-  width: 132px;
-  height: 132px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  border: none;
-  font-size: 3.4rem;
-  background: radial-gradient(circle at 35% 30%, #9fb3bf, var(--color-rauchblau-dark) 70%);
-  box-shadow: 0 8px 24px rgba(95, 120, 133, 0.45), inset 0 -6px 14px rgba(0, 0, 0, 0.18);
-  animation: gn-breathe 2.6s ease-in-out infinite;
-  transition: transform 0.12s ease;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  color: #f4e9d8;
+  background: radial-gradient(circle at 32% 28%, #5d7382 0%, #34434d 55%, #232e35 100%);
+  box-shadow:
+    0 10px 30px rgba(35, 46, 53, 0.35),
+    0 0 0 6px rgba(124, 147, 160, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  animation: gn-breathe 4s ease-in-out infinite;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.gn-magic:active { transform: scale(0.9); }
+.gn-magic svg {
+  width: 52px;
+  height: 52px;
+  filter: drop-shadow(0 0 8px rgba(244, 233, 216, 0.55));
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
 
+.gn-magic:active { transform: scale(0.96); }
+
+/* Verwandlung (3 s): Mond verblasst, Licht sammelt sich, Kugel löst sich auf */
 .gn-magic--go {
-  animation: gn-spin 1.1s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
+  animation: gn-orb-go 3s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+
+.gn-magic--go svg {
+  opacity: 0;
+  transform: scale(0.7) rotate(-12deg);
+}
+
+.gn-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(185, 122, 90, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: gn-ring 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+}
+
+.gn-mote {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: #f7e7cf;
+  box-shadow: 0 0 6px 2px rgba(233, 196, 150, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  animation: gn-mote var(--d) cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
 }
 
 .gn-magic-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
   color: var(--color-text-soft);
-}
-
-.gn-sparkle {
-  position: absolute;
-  left: 50%;
-  top: 66px;
-  pointer-events: none;
-  opacity: 0;
-  animation: gn-fly 0.9s ease-out forwards;
+  transition: opacity 0.4s ease;
 }
 
 .gn-reveal {
@@ -2391,7 +2434,7 @@ textarea:focus-visible {
   text-align: center;
   display: grid;
   gap: 8px;
-  animation: gn-pop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+  animation: gn-reveal 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .gn-reveal-icon { font-size: 2.6rem; }
@@ -2414,31 +2457,48 @@ textarea:focus-visible {
 
 @keyframes gn-breathe {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+  50% { transform: scale(1.03); }
 }
 
-@keyframes gn-spin {
-  0% { transform: scale(1) rotate(0); }
-  30% { transform: scale(0.85) rotate(-20deg); }
-  100% { transform: scale(1.1) rotate(360deg); }
-}
-
-@keyframes gn-fly {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
-  20% { opacity: 1; }
+@keyframes gn-orb-go {
+  0% { transform: scale(1); filter: blur(0); opacity: 1; }
+  18% { transform: scale(0.94); }
+  70% {
+    transform: scale(1.02);
+    box-shadow: 0 0 60px 18px rgba(233, 196, 150, 0.45), 0 0 0 6px rgba(124, 147, 160, 0.12);
+    opacity: 1;
+  }
   100% {
+    transform: scale(1.18);
+    filter: blur(6px);
     opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2) rotate(180deg);
+    box-shadow: 0 0 90px 30px rgba(233, 196, 150, 0);
   }
 }
 
-@keyframes gn-pop {
-  0% { opacity: 0; transform: scale(0.6); }
-  100% { opacity: 1; transform: scale(1); }
+@keyframes gn-ring {
+  0% { opacity: 0; transform: scale(0.9); }
+  20% { opacity: 0.8; }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+@keyframes gn-mote {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  25% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+  }
+}
+
+@keyframes gn-reveal {
+  0% { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(8px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gn-magic, .gn-magic--go, .gn-reveal { animation: none; }
+  .gn-magic, .gn-magic--go, .gn-reveal, .gn-ring, .gn-mote { animation: none; }
+  .gn-ring, .gn-mote { display: none; }
 }
 
 /* Fragebogen – Level, XP, Abzeichen */

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { GOOD_NIGHT_TASKS } from '../goodNight/tasks.js';
 import { toIso } from '../utils/dates.js';
+import { getDraw, saveDraw, markDrawDone } from '../cloud/goodNight.js';
 
-const STORAGE_KEY = 'trackli-good-night';
-const SPARKLE_MS = 1100;
-const SPARKLE_ICONS = ['✨', '⭐', '💫', '🌟', '✦'];
+// So lange dauert die Verwandlung, bis die Aufgabe erscheint.
+const SPARKLE_MS = 3000;
 
 // Der „Abend“ gilt bis 5 Uhr früh – wer nach Mitternacht nachschaut, gehört
 // noch zum Vortag. Danach darf eine neue Aufgabe gezogen werden.
@@ -14,68 +14,85 @@ function eveningKey() {
   return toIso(d);
 }
 
-// Gespeichert: { day, taskId, done, lastTaskId } – eine Aufgabe pro Abend.
-function loadState() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
-    if (raw.day === eveningKey() && GOOD_NIGHT_TASKS.some((t) => t.id === raw.taskId)) return raw;
-    return { lastTaskId: raw.taskId ?? raw.lastTaskId ?? null };
-  } catch {
-    return {};
-  }
-}
-
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Ohne Speicher klappt es trotzdem, nur ohne Merken.
-  }
-}
-
-// Zufällige Flugbahnen für die Sparkles.
+// Feine Lichtpunkte, die langsam nach außen treiben – bei jedem Ziehen neu.
 function makeSparkles() {
-  return Array.from({ length: 16 }, (_, i) => {
-    const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.4;
-    const dist = 90 + Math.random() * 70;
+  return Array.from({ length: 22 }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 80 + Math.random() * 90;
     return {
       id: i,
-      icon: SPARKLE_ICONS[i % SPARKLE_ICONS.length],
       dx: Math.round(Math.cos(angle) * dist),
       dy: Math.round(Math.sin(angle) * dist),
-      delay: Math.round(Math.random() * 180),
-      size: 0.9 + Math.random() * 0.9,
+      size: 2 + Math.random() * 3,
+      delay: 300 + Math.round(Math.random() * 1400),
+      duration: 1200 + Math.round(Math.random() * 900),
     };
   });
 }
 
-export default function GoodNight({ onHome }) {
-  const [state, setState] = useState(loadState);
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.3 14.6A8.5 8.5 0 0 1 9.4 3.7a8.5 8.5 0 1 0 10.9 10.9Z" />
+    </svg>
+  );
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+export default function GoodNight({ user, onHome }) {
+  // { evening, taskId, done, lastTaskId } – undefined solange geladen wird.
+  const [state, setState] = useState(undefined);
   const [sparkling, setSparkling] = useState(false);
   const [sparkles, setSparkles] = useState([]);
-  const timer = useRef(null);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const [error, setError] = useState('');
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
-  const task = !sparkling && GOOD_NIGHT_TASKS.find((t) => t.id === state.taskId);
+  useEffect(() => {
+    const evening = eveningKey();
+    getDraw(user, evening)
+      .then((d) => alive.current && setState({ evening, ...d }))
+      .catch(() => alive.current && setState({ evening, taskId: null, done: false, lastTaskId: null }));
+  }, [user?.id]);
 
-  function update(next) {
-    setState(next);
-    saveState(next);
-  }
+  const task = state && !sparkling && GOOD_NIGHT_TASKS.find((t) => t.id === state.taskId);
 
-  // Zieht die Aufgabe des Abends – nicht dieselbe wie am Vorabend.
-  function draw() {
-    if (sparkling || state.taskId) return;
+  // Zieht die Aufgabe des Abends – nicht dieselbe wie am Vorabend. Die
+  // Verwandlung läuft immer volle 3 s, auch wenn das Speichern schneller ist.
+  async function draw() {
+    if (!state || sparkling || state.taskId) return;
     let pool = GOOD_NIGHT_TASKS;
     if (pool.length > 1) pool = pool.filter((t) => t.id !== state.lastTaskId);
     const next = pool[Math.floor(Math.random() * pool.length)];
+    // Ist der Abend inzwischen vorbei (App über Nacht offen), neu zählen.
+    const evening = eveningKey();
+    setError('');
     setSparkles(makeSparkles());
     setSparkling(true);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      update({ day: eveningKey(), taskId: next.id, done: false, lastTaskId: state.lastTaskId ?? null });
-      setSparkling(false);
-    }, SPARKLE_MS);
+    try {
+      const [saved] = await Promise.all([saveDraw(user, evening, next.id, state.lastTaskId), wait(SPARKLE_MS)]);
+      if (alive.current) setState((s) => ({ ...s, evening, ...saved }));
+    } catch {
+      if (alive.current) setError('Konnte nicht gespeichert werden – bitte nochmal versuchen.');
+    } finally {
+      if (alive.current) setSparkling(false);
+    }
+  }
+
+  async function finish() {
+    setState((s) => ({ ...s, done: true }));
+    try {
+      await markDrawDone(user, state.evening);
+    } catch {
+      setState((s) => ({ ...s, done: false }));
+      setError('Konnte nicht gespeichert werden – bitte nochmal versuchen.');
+    }
   }
 
   return (
@@ -91,7 +108,9 @@ export default function GoodNight({ onHome }) {
       </p>
 
       <div className="gn-stage">
-        {task ? (
+        {state === undefined ? (
+          <div className="gn-magic-label">Lädt …</div>
+        ) : task ? (
           <div className="card gn-reveal">
             <div className="gn-reveal-icon" aria-hidden="true">{task.icon}</div>
             <div className="gn-reveal-title">{task.title}</div>
@@ -100,7 +119,7 @@ export default function GoodNight({ onHome }) {
               {state.done ? (
                 <div className="gn-done">Erledigt – schlaft gut 🌙</div>
               ) : (
-                <button type="button" className="btn-primary" onClick={() => update({ ...state, done: true })}>
+                <button type="button" className="btn-primary" onClick={finish}>
                   Erledigt ✓
                 </button>
               )}
@@ -108,34 +127,39 @@ export default function GoodNight({ onHome }) {
           </div>
         ) : (
           <div className="gn-magic-wrap">
-            <button
-              type="button"
-              className={`gn-magic${sparkling ? ' gn-magic--go' : ''}`}
-              onClick={draw}
-              aria-label="Aufgabe für heute Abend ziehen"
-            >
-              <span aria-hidden="true">🌙</span>
-            </button>
-            {sparkling &&
-              sparkles.map((s) => (
-                <span
-                  key={s.id}
-                  className="gn-sparkle"
-                  aria-hidden="true"
-                  style={{
-                    '--dx': `${s.dx}px`,
-                    '--dy': `${s.dy}px`,
-                    animationDelay: `${s.delay}ms`,
-                    fontSize: `${s.size}rem`,
-                  }}
-                >
-                  {s.icon}
-                </span>
+            <div className="gn-orb">
+              {sparkling && [0, 500, 1000].map((d) => (
+                <span key={d} className="gn-ring" style={{ animationDelay: `${d}ms` }} aria-hidden="true" />
               ))}
-            <div className="gn-magic-label">{sparkling ? 'Moment …' : 'Tippen für die Aufgabe von heute'}</div>
+              <button
+                type="button"
+                className={`gn-magic${sparkling ? ' gn-magic--go' : ''}`}
+                onClick={draw}
+                aria-label="Aufgabe für heute Abend ziehen"
+              >
+                <MoonIcon />
+              </button>
+              {sparkling &&
+                sparkles.map((s) => (
+                  <span
+                    key={s.id}
+                    className="gn-mote"
+                    aria-hidden="true"
+                    style={{
+                      '--dx': `${s.dx}px`,
+                      '--dy': `${s.dy}px`,
+                      '--s': `${s.size}px`,
+                      '--d': `${s.duration}ms`,
+                      animationDelay: `${s.delay}ms`,
+                    }}
+                  />
+                ))}
+            </div>
+            <div className="gn-magic-label">{sparkling ? 'Eure Aufgabe entsteht …' : 'Tippen für die Aufgabe von heute'}</div>
           </div>
         )}
       </div>
+      {error && <p className="gn-magic-label" role="alert">{error}</p>}
     </div>
   );
 }

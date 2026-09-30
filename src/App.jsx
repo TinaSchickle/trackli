@@ -285,7 +285,7 @@ export default function App() {
   if (view === 'goodnight') {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
-        <GoodNight onHome={() => setView('home')} />
+        <GoodNight user={user} onHome={() => setView('home')} />
         {accountModal}
       </div>
     );
