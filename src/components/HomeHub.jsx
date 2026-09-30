@@ -72,13 +72,15 @@ export default function HomeHub({ user, allowedTiles, onOpen, onAccount }) {
           <button
             key={t.key}
             type="button"
-            className={`hub-tile${t.active ? '' : ' is-inactive'}`}
+            className={`hub-tile${t.active ? '' : ' is-inactive'}${t.featured ? ' is-featured' : ''}`}
             disabled={!t.active}
             onClick={() => onOpen(t.key)}
           >
             <span className="hub-tile-icon" aria-hidden="true">{t.icon}</span>
             <span className="hub-tile-title">{t.title}</span>
-            <span className="hub-tile-sub">{t.active ? t.subtitle : 'Bald verfügbar'}</span>
+            <span className="hub-tile-sub">
+              {t.active ? t.subtitle : t.featured ? `${t.subtitle} · bald verfügbar` : 'Bald verfügbar'}
+            </span>
           </button>
         ))}
       </div>

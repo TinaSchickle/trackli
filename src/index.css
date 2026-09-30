@@ -1539,6 +1539,20 @@ textarea:focus-visible {
   background: transparent;
 }
 
+/* Hervorgehobene Kachel: volle Breite, Akzentrahmen – auch solange sie
+   noch inaktiv ist, gut sichtbar. */
+.hub-tile.is-featured {
+  grid-column: 1 / -1;
+  min-height: 120px;
+  border: 2px solid var(--color-ton);
+  background: var(--color-surface);
+  opacity: 1;
+}
+
+.hub-tile.is-featured .hub-tile-title {
+  font-size: 1.3rem;
+}
+
 /* ── Spaß-Dates: Kork-Pinnwand mit Memory-Karten ─────────────────────────── */
 .fd-back {
   background: transparent;
