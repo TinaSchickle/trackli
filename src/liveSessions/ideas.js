@@ -5,4 +5,17 @@
 //   icon   Emoji auf der Kachel (optional)
 //   notes  [String] – ein Eintrag pro Absatz/Stichpunkt
 
-export const LIVE_IDEAS = [];
+export const LIVE_IDEAS = [
+  {
+    id: 'gebaermutter-zuhause',
+    title: 'Gebärmutter-Zuhause bauen',
+    icon: '🏡',
+    notes: ['Format: Gruppencall'],
+  },
+  {
+    id: 'blockadensuche',
+    title: 'Blockadensuche',
+    icon: '🔍',
+    notes: ['Format: Einzelcall'],
+  },
+];
