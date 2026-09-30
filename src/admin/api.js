@@ -1,4 +1,4 @@
-import { supabase } from '../cloud/supabase.js';
+import { supabase, isCloudConfigured } from '../cloud/supabase.js';
 
 // Alle Admin-Aufrufe – nur von der Admin-Seite geladen, nie von der App der
 // Paare. Supabase prüft jeden davon selbst per is_admin() (RLS bzw. Check in

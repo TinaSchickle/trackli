@@ -63,52 +63,87 @@ function LoginForm() {
   );
 }
 
-function TileToggles({ row, onChange }) {
-  const [saving, setSaving] = useState(null);
+// Übersicht: eine Zeile pro Nutzer, eine Spalte pro Kachel. Ein Klick auf
+// ein Feld schaltet die Kachel für diesen Nutzer an/aus (sofort gespeichert).
+function TileMatrix({ rows, onTilesChange }) {
+  const [saving, setSaving] = useState(null); // "userId:tileKey"
   const [error, setError] = useState(null);
 
-  async function toggle(key) {
+  async function toggle(row, key) {
     const next = row.tiles.includes(key) ? row.tiles.filter((t) => t !== key) : [...row.tiles, key];
-    setSaving(key);
+    setSaving(`${row.user_id}:${key}`);
     setError(null);
     try {
       await adminSetTiles(row.user_id, next);
-      onChange(next);
+      onTilesChange(row.user_id, next);
     } catch {
-      setError('Speichern fehlgeschlagen.');
+      setError('Speichern fehlgeschlagen – bitte nochmal versuchen.');
     } finally {
       setSaving(null);
     }
   }
 
   return (
-    <div>
-      <div className="adm-tiles">
-        {HUB_TILES.map((t) => {
-          const on = row.tiles.includes(t.key);
-          return (
-            <button
-              key={t.key}
-              type="button"
-              className={`adm-tile${on ? ' is-on' : ''}`}
-              aria-pressed={on}
-              disabled={saving !== null}
-              onClick={() => toggle(t.key)}
-              title={t.active ? '' : 'Kachel ist noch in Arbeit (für alle ausgegraut)'}
-            >
-              <span aria-hidden="true">{t.icon}</span> {t.title}
-              {!t.active && <span className="adm-soon">bald</span>}
-              {saving === t.key && ' …'}
-            </button>
-          );
-        })}
+    <div className="card adm-matrix-card">
+      <div className="adm-matrix-scroll">
+        <table className="adm-matrix">
+          <thead>
+            <tr>
+              <th scope="col">Nutzer</th>
+              {HUB_TILES.map((t) => (
+                <th key={t.key} scope="col">
+                  <span aria-hidden="true">{t.icon}</span>
+                  <br />
+                  {t.title}
+                  {!t.active && <div className="adm-soon">noch in Arbeit</div>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const admin = isAdmin({ email: row.email });
+              const names = [row.her_name, row.his_name].filter(Boolean).join(' & ');
+              return (
+                <tr key={row.user_id}>
+                  <th scope="row">
+                    {names || row.username || displayLogin(row.email)}
+                    <div style={softText}>
+                      {names ? row.username || displayLogin(row.email) : ''}
+                      {admin && (names ? ' · ' : '') + 'Admin'}
+                    </div>
+                  </th>
+                  {HUB_TILES.map((t) => {
+                    const on = admin || row.tiles.includes(t.key);
+                    const busy = saving === `${row.user_id}:${t.key}`;
+                    return (
+                      <td key={t.key}>
+                        <button
+                          type="button"
+                          className={`adm-cell${on ? ' is-on' : ''}`}
+                          aria-pressed={on}
+                          aria-label={`${t.title} für ${names || row.username || row.email} ${on ? 'sichtbar' : 'ausgeblendet'}`}
+                          title={admin ? 'Admin sieht immer alle Kacheln' : on ? 'Sichtbar – klicken zum Ausblenden' : 'Ausgeblendet – klicken zum Freischalten'}
+                          disabled={admin || saving !== null}
+                          onClick={() => toggle(row, t.key)}
+                        >
+                          {busy ? '…' : on ? '✓' : ''}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
       {error && <p className="adm-error">{error}</p>}
     </div>
   );
 }
 
-function CoupleCard({ row, onTilesChange }) {
+function CoupleCard({ row }) {
   const names = [row.her_name, row.his_name].filter(Boolean).join(' & ');
   const admin = isAdmin({ email: row.email });
   return (
@@ -132,15 +167,6 @@ function CoupleCard({ row, onTilesChange }) {
           </div>
         </dl>
       </header>
-
-      <section>
-        <h4>Sichtbare Kacheln</h4>
-        {admin ? (
-          <p style={softText}>Admin sieht immer alle Kacheln.</p>
-        ) : (
-          <TileToggles row={row} onChange={onTilesChange} />
-        )}
-      </section>
 
       <section>
         <h4>Fortschritt</h4>
@@ -190,19 +216,23 @@ function Overview() {
           Aktualisieren
         </button>
       </div>
+      <h3 className="adm-subhead">Welche Kacheln sieht wer?</h3>
       <p style={softText}>
-        Ohne Zyklusdaten und ohne Selfies – die bleiben privat beim Paar. Neue Paare sehen
-        zuerst nur den Fragebogen.
+        Farbig mit ✓ = sichtbar. Klicken schaltet um und speichert sofort; das Paar sieht es beim
+        nächsten Öffnen der App. Neue Paare sehen zuerst nur den Fragebogen.
       </p>
+      <TileMatrix
+        rows={rows}
+        onTilesChange={(userId, tiles) =>
+          setRows((prev) => prev.map((p) => (p.user_id === userId ? { ...p, tiles } : p)))
+        }
+      />
+
+      <h3 className="adm-subhead">Details & Fortschritt</h3>
+      <p style={softText}>Ohne Zyklusdaten und ohne Selfies – die bleiben privat beim Paar.</p>
       <div className="adm-grid">
         {rows.map((r) => (
-          <CoupleCard
-            key={r.user_id}
-            row={r}
-            onTilesChange={(tiles) =>
-              setRows((prev) => prev.map((p) => (p.user_id === r.user_id ? { ...p, tiles } : p)))
-            }
-          />
+          <CoupleCard key={r.user_id} row={r} />
         ))}
       </div>
     </>
