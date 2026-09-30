@@ -50,6 +50,24 @@ export function normalizeUsername(name) {
   return name.trim().toLowerCase();
 }
 
+// Vorschlag aus den beiden Vornamen, z. B. „Tina“ + „Pascal“ → „TinaUndPascal“.
+// Umlaute werden umschrieben, alles außer Buchstaben/Ziffern fällt weg.
+export function suggestUsername(her, him) {
+  const clean = (n) =>
+    n
+      .trim()
+      .split(/\s+/)[0]
+      .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+      .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+      .replace(/ß/g, 'ss')
+      .normalize('NFD')
+      .replace(/[^A-Za-z0-9]/g, '');
+  const cap = (n) => n.charAt(0).toUpperCase() + n.slice(1);
+  const a = cap(clean(her));
+  const b = cap(clean(him));
+  return a && b ? `${a}Und${b}` : a || b;
+}
+
 export function loginToEmail(login) {
   const v = login.trim().toLowerCase();
   return v.includes('@') ? v : `${v}@${LOGIN_DOMAIN}`;
@@ -57,6 +75,8 @@ export function loginToEmail(login) {
 
 // Anzeigename des Kontos: Benutzername, sonst die E-Mail (Alt-/Admin-Konten).
 export function displayLogin(emailOrUser) {
+  const chosen = typeof emailOrUser === 'object' ? emailOrUser?.user_metadata?.username : null;
+  if (chosen) return chosen;
   const email = typeof emailOrUser === 'string' ? emailOrUser : emailOrUser?.email;
   if (!email) return '';
   return email.endsWith('@' + LOGIN_DOMAIN) ? email.slice(0, -(LOGIN_DOMAIN.length + 1)) : email;
@@ -102,7 +122,9 @@ export async function checkInviteCode(code) {
 // Legt mit einem Zugangscode das Konto an und meldet direkt an.
 export async function redeemInviteCode({ code, username, password, her, him }) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
-  const name = normalizeUsername(username);
+  // Groß-/Kleinschreibung bleibt für die Anzeige erhalten; angemeldet wird
+  // unabhängig davon (loginToEmail macht alles klein).
+  const name = username.trim();
   const { data, error } = await supabase.auth.signUp({
     email: loginToEmail(name),
     password,

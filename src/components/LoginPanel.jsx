@@ -4,6 +4,7 @@ import {
   checkInviteCode,
   redeemInviteCode,
   normalizeUsername,
+  suggestUsername,
   USERNAME_PATTERN,
 } from '../cloud/auth.js';
 
@@ -51,6 +52,10 @@ export default function LoginPanel() {
   const [her, setHer] = useState('');
   const [him, setHim] = useState('');
   const [username, setUsername] = useState('');
+  // Solange das Paar den Benutzernamen nicht selbst angefasst hat, wird er
+  // aus den beiden Namen vorgeschlagen.
+  const [usernameEdited, setUsernameEdited] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [forgot, setForgot] = useState(false);
@@ -100,7 +105,7 @@ export default function LoginPanel() {
       setError('Die beiden Passwörter stimmen nicht überein.');
       return;
     }
-    run(() => redeemInviteCode({ code, username: name, password, her, him }));
+    run(() => redeemInviteCode({ code, username: username.trim(), password, her, him }));
   }
 
   const errorEl = error && (
@@ -151,7 +156,10 @@ export default function LoginPanel() {
                 required
                 autoComplete="off"
                 value={her}
-                onChange={(e) => setHer(e.target.value)}
+                onChange={(e) => {
+                  setHer(e.target.value);
+                  if (!usernameEdited) setUsername(suggestUsername(e.target.value, him));
+                }}
                 style={{ ...inputStyle, marginTop: 4 }}
               />
             </label>
@@ -162,24 +170,43 @@ export default function LoginPanel() {
                 required
                 autoComplete="off"
                 value={him}
-                onChange={(e) => setHim(e.target.value)}
+                onChange={(e) => {
+                  setHim(e.target.value);
+                  if (!usernameEdited) setUsername(suggestUsername(her, e.target.value));
+                }}
                 style={{ ...inputStyle, marginTop: 4 }}
               />
             </label>
           </div>
-          <label style={labelStyle}>Benutzername (zum Anmelden)</label>
+          <label style={labelStyle}>Benutzername (zum Anmelden – könnt ihr ändern)</label>
           <input
             type="text"
             required
             autoComplete="username"
             autoCapitalize="none"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setUsernameEdited(true);
+            }}
             style={inputStyle}
           />
+
+          <div className="login-task">
+            <strong>Eure erste Aufgabe 💪</strong>
+            <p>
+              Was ist ein starker, positiver Leitsatz, der euch durch die nächsten Wochen tragen
+              wird? Macht daraus euer Passwort.
+            </p>
+            <p>
+              Beispiel: <em>„Unsere Liebe gewinnt immer“</em> kann zum Beispiel zu{' '}
+              <code>ULgI888!&lt;3</code> werden.
+            </p>
+          </div>
+
           <label style={labelStyle}>Passwort</label>
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             required
             minLength={6}
             autoComplete="new-password"
@@ -189,14 +216,18 @@ export default function LoginPanel() {
           />
           <label style={labelStyle}>Passwort wiederholen</label>
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             required
             minLength={6}
             autoComplete="new-password"
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
-            style={{ ...inputStyle, marginBottom: 14 }}
+            style={{ ...inputStyle, marginBottom: 8 }}
           />
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.85rem', marginBottom: 14 }}>
+            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+            Passwort anzeigen
+          </label>
           {errorEl}
           <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
             {busy ? 'Bitte warten…' : 'Konto anlegen & los'}

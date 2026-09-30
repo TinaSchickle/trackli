@@ -2041,3 +2041,27 @@ textarea:focus-visible {
   text-align: center;
   padding: 6px 0 8px;
 }
+
+/* Registrierung: Passwort-Aufgabe */
+.login-task {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--color-muschel-light);
+  border: 1px solid var(--color-line);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.login-task p {
+  margin: 6px 0 0;
+  color: var(--color-text-soft);
+}
+
+.login-task code {
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
