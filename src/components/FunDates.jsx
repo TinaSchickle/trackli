@@ -563,6 +563,14 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
               <button
                 type="button"
                 className="btn-secondary"
+                onClick={onHome}
+                style={{ width: '100%', marginTop: 10 }}
+              >
+                Zurück zur Übersicht
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setConfirmBack(false)}
                 style={{ width: '100%', marginTop: 10 }}
               >
