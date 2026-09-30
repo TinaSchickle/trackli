@@ -201,6 +201,28 @@ create policy "fun dates sind privat"
 
 grant select, insert, update, delete on public.fun_dates_done to authenticated;
 
+-- ── Spaß-Dates / Sexy Time: gemerktes Date ───────────────────────────────────
+-- Pro Konto und Kachel (variant 'dates' | 'sexy') genau ein gemerktes Date,
+-- damit das Paar erst vorbereiten und später direkt wieder hinspringen kann.
+create table if not exists public.fun_dates_saved (
+  user_id   uuid        not null references auth.users (id) on delete cascade,
+  variant   text        not null,
+  card_id   text        not null,
+  saved_at  timestamptz not null default now(),
+  primary key (user_id, variant)
+);
+
+alter table public.fun_dates_saved enable row level security;
+
+drop policy if exists "gemerkte dates sind privat" on public.fun_dates_saved;
+create policy "gemerkte dates sind privat"
+  on public.fun_dates_saved
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.fun_dates_saved to authenticated;
+
 -- ── Zugangscodes (Registrierung nur mit Code von der Admin) ─────────────────
 -- Konten entstehen ausschließlich über einen einmaligen Zugangscode. Das Paar
 -- gibt Code, Namen, Benutzername und Passwort in der App ein; die App legt das

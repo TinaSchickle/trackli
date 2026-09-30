@@ -10,7 +10,15 @@ import {
   matchesFilters,
 } from '../funDates/cards.js';
 import { SEXY_CARDS } from '../sexyTime/cards.js';
-import { getDoneCards, markCardDone, unmarkCardDone, compressImage } from '../cloud/funDates.js';
+import {
+  getDoneCards,
+  markCardDone,
+  unmarkCardDone,
+  compressImage,
+  getSavedCard,
+  saveCard,
+  clearSavedCard,
+} from '../cloud/funDates.js';
 
 // Die Pinnwand gibt es zweimal: Spaß-Dates (mit Quiz + Erinnerungs-Selfie)
 // und Sexy Time (alle Karten ohne Filter, abhaken ohne Foto).
@@ -265,7 +273,7 @@ function SelfieModal({ alreadyDone, onSave, onClose }) {
   );
 }
 
-function DateDetail({ card, done, selfie, withSelfie, busy, onDone, onUndo, onBack }) {
+function DateDetail({ card, done, selfie, withSelfie, saved, busy, onDone, onUndo, onSave, onUnsave, onBack }) {
   const media = card.media ?? [];
   const steps = card.steps ?? [];
   // Erst nur „Das braucht ihr“ zeigen; der Rest kommt nach „Wir sind bereit“.
@@ -299,6 +307,24 @@ function DateDetail({ card, done, selfie, withSelfie, busy, onDone, onUndo, onBa
         >
           Wir sind bereit ✨
         </button>
+        {saved ? (
+          <div className="fd-saved-note">
+            📌 Gemerkt – ihr findet das Date oben auf der Pinnwand-Seite.
+            <button type="button" className="fd-link" disabled={busy} onClick={onUnsave}>
+              Nicht mehr merken
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={busy}
+            onClick={onSave}
+            style={{ width: '100%', marginTop: 10 }}
+          >
+            📌 Erst vorbereiten – Date merken
+          </button>
+        )}
       </div>
     );
   }
@@ -384,15 +410,42 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
   const [openId, setOpenId] = useState(null);
   const [confirmBack, setConfirmBack] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Das eine gemerkte Date dieser Kachel (zum Vorbereiten + Zurückspringen).
+  const [savedId, setSavedId] = useState(null);
 
   useEffect(() => {
     setLoadError(null);
     getDoneCards(user)
       .then(setDoneMap)
       .catch(() => setLoadError('Erledigte Dates konnten nicht geladen werden.'));
-  }, [user]);
+    // Fehler hier nur still schlucken – ohne gemerktes Date geht alles andere.
+    getSavedCard(user, variant)
+      .then(setSavedId)
+      .catch(() => setSavedId(null));
+  }, [user, variant]);
 
   const openCard = useMemo(() => cards.find((c) => c.id === openId), [cards, openId]);
+  const savedCard = useMemo(() => cards.find((c) => c.id === savedId), [cards, savedId]);
+
+  async function runSaved(action, nextId) {
+    setBusy(true);
+    try {
+      await action();
+      setSavedId(nextId);
+    } catch {
+      setLoadError('Speichern hat nicht geklappt. Bitte später nochmal versuchen.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const handleSave = () => runSaved(() => saveCard(user, variant, openId), openId);
+  const handleUnsave = () => runSaved(() => clearSavedCard(user, variant), null);
+
+  function openSaved() {
+    setOpenId(savedId);
+    window.scrollTo(0, 0);
+  }
 
   // Ohne Quiz (Sexy Time) werden einfach alle Karten gemischt und verteilt.
   function handleStart() {
@@ -439,6 +492,10 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
     const url = await markCardDone(user, openId, blob);
     setDoneMap((prev) => ({ ...prev, [openId]: blob ? url : prev[openId] ?? null }));
     setSelfieOpen(false);
+    // Erledigt – dann braucht es auch nicht mehr gemerkt zu sein.
+    if (openId === savedId) {
+      clearSavedCard(user, variant).then(() => setSavedId(null), () => {});
+    }
   }
 
   // Ohne Selfie-Funktion: direkt abhaken.
@@ -479,9 +536,12 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
           done={openCard.id in doneMap}
           selfie={doneMap[openCard.id]}
           withSelfie={v.withSelfie}
+          saved={openCard.id === savedId}
           busy={busy}
           onDone={v.withSelfie ? () => setSelfieOpen(true) : handleMarkDone}
           onUndo={handleUndo}
+          onSave={handleSave}
+          onUnsave={handleUnsave}
           onBack={() => setConfirmBack(true)}
         />
         {selfieOpen && <SelfieModal alreadyDone={openCard.id in doneMap} onSave={handleSaveSelfie} onClose={() => setSelfieOpen(false)} />}
@@ -522,6 +582,14 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
         <div className="eyebrow">{v.eyebrow}</div>
         <h1 style={{ fontSize: '1.4rem' }}>{v.title}</h1>
       </div>
+
+      {savedCard && (
+        <button type="button" className="fd-saved-go" onClick={openSaved}>
+          <span className="fd-sticky-pin is-red" aria-hidden="true" />
+          <span className="fd-saved-label">Euer gemerktes Date</span>
+          Weiter mit: {savedCard.title} →
+        </button>
+      )}
 
       {v.withQuiz && <Legend />}
 
@@ -611,6 +679,7 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
                       {done && <span className="fd-done-stamp">✓ gemacht</span>}
                     </span>
                   </span>
+                  {d.id === savedId && <span className="fd-saved-flag">📌 gemerkt</span>}
                 </button>
               );
             })}

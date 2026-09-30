@@ -97,6 +97,67 @@ export async function unmarkCardDone(user, cardId) {
   if (error) throw error;
 }
 
+// ── Gemerktes Date ─────────────────────────────────────────────────────────
+// Pro Kachel (variant: 'dates' | 'sexy') kann genau ein Date gemerkt sein,
+// damit das Paar erst vorbereiten und später direkt wieder hinspringen kann.
+// Angemeldet in Supabase (Tabelle fun_dates_saved, RLS), sonst lokal.
+
+const SAVED_KEY = 'funDatesSaved';
+
+function readSavedLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedLocal(map) {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify(map));
+  } catch {
+    // Speicher voll/blockiert – dann eben nur für diese Sitzung.
+  }
+}
+
+// Liefert die ID des gemerkten Dates oder null.
+export async function getSavedCard(user, variant) {
+  if (!isCloudConfigured || !user) return readSavedLocal()[variant] ?? null;
+  const { data, error } = await supabase
+    .from('fun_dates_saved')
+    .select('card_id')
+    .eq('variant', variant)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.card_id ?? null;
+}
+
+// Merkt ein Date (ersetzt ein vorher gemerktes).
+export async function saveCard(user, variant, cardId) {
+  if (!isCloudConfigured || !user) {
+    writeSavedLocal({ ...readSavedLocal(), [variant]: cardId });
+    return;
+  }
+  const { error } = await supabase
+    .from('fun_dates_saved')
+    .upsert(
+      { user_id: user.id, variant, card_id: cardId, saved_at: new Date().toISOString() },
+      { onConflict: 'user_id,variant' }
+    );
+  if (error) throw error;
+}
+
+export async function clearSavedCard(user, variant) {
+  if (!isCloudConfigured || !user) {
+    const map = readSavedLocal();
+    delete map[variant];
+    writeSavedLocal(map);
+    return;
+  }
+  const { error } = await supabase.from('fun_dates_saved').delete().eq('variant', variant);
+  if (error) throw error;
+}
+
 // Verkleinert ein Foto aufs Handy-taugliche Maß und macht ein JPEG daraus
 // (typisch 100–300 KB statt mehrerer MB direkt aus der Kamera).
 export async function compressImage(file, maxSide = 1280, quality = 0.82) {
