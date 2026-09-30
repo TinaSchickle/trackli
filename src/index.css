@@ -2373,3 +2373,13 @@ textarea:focus-visible {
 .fh-empty {
   color: var(--color-text-soft);
 }
+
+.todo-item {
+  align-items: flex-start;
+}
+
+.todo-notes {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}

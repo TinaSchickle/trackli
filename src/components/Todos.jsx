@@ -16,7 +16,16 @@ export default function Todos({ onHome }) {
           {TODO_ITEMS.map((t) => (
             <li key={t.id} className="card todo-item">
               <span aria-hidden="true">{t.icon ?? '☐'}</span>
-              <span>{t.title}</span>
+              <div>
+                <div>{t.title}</div>
+                {t.notes?.length > 0 && (
+                  <ul className="live-notes todo-notes">
+                    {t.notes.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </li>
           ))}
         </ul>
