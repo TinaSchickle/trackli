@@ -18,4 +18,10 @@ export const LIVE_IDEAS = [
     icon: '🔍',
     notes: ['Format: Einzelcall'],
   },
+  {
+    id: 'zyklus-verstehen',
+    title: 'Zyklus verstehen',
+    icon: '🌙',
+    notes: ['Format: Gruppencall'],
+  },
 ];
