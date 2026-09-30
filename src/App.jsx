@@ -20,6 +20,7 @@ import HomeHub from './components/HomeHub.jsx';
 import { getMyTiles } from './cloud/tiles.js';
 import FunDates from './components/FunDates.jsx';
 import LiveSessions from './components/LiveSessions.jsx';
+import Todos from './components/Todos.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -169,7 +170,7 @@ export default function App() {
       .then((tiles) => {
         if (!alive) return;
         setAllowedTiles(tiles);
-        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live' }[view];
+        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live', todos: 'todos' }[view];
         if (viewTile && tiles !== null && !tiles.includes(viewTile)) setView('home');
       })
       .catch(() => alive && setAllowedTiles([]));
@@ -253,6 +254,15 @@ export default function App() {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
         <HomeHub user={user} allowedTiles={allowedTiles} onOpen={setView} onAccount={() => setShowAccount(true)} />
+        {accountModal}
+      </div>
+    );
+  }
+
+  if (view === 'todos') {
+    return (
+      <div className="app-shell" style={{ paddingBottom: 20 }}>
+        <Todos onHome={() => setView('home')} />
         {accountModal}
       </div>
     );
