@@ -549,3 +549,24 @@ $$;
 
 revoke execute on function public.redeem_reset_code(text, text) from public;
 grant execute on function public.redeem_reset_code(text, text) to anon, authenticated;
+
+-- ── Fragebogen ───────────────────────────────────────────────────────────────
+-- Pro Konto eine Zeile mit allen Antworten als JSON ({ frageId: wert }). Die
+-- Fragen selbst stehen im Code (src/questionnaire/questions.js). Die App
+-- speichert nach jeder Antwort zwischen.
+create table if not exists public.questionnaire_answers (
+  user_id     uuid        primary key references auth.users (id) on delete cascade,
+  answers     jsonb       not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.questionnaire_answers enable row level security;
+
+drop policy if exists "fragebogen ist privat" on public.questionnaire_answers;
+create policy "fragebogen ist privat"
+  on public.questionnaire_answers
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.questionnaire_answers to authenticated;

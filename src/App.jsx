@@ -25,6 +25,7 @@ import { START_IDEAS } from './startpunkt/ideas.js';
 import Todos from './components/Todos.jsx';
 import GoodNight from './components/GoodNight.jsx';
 import ForHim from './components/ForHim.jsx';
+import Questionnaire from './components/Questionnaire.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
 const TAB_LABELS = Object.fromEntries(TABS.map((t) => [t.key, t.label]));
@@ -267,6 +268,15 @@ export default function App() {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
         <ForHim user={user} cycles={cycles} onHome={() => setView('home')} />
+        {accountModal}
+      </div>
+    );
+  }
+
+  if (view === 'questionnaire') {
+    return (
+      <div className="app-shell" style={{ paddingBottom: 20 }}>
+        <Questionnaire user={user} onHome={() => setView('home')} />
         {accountModal}
       </div>
     );

@@ -6,7 +6,7 @@
 // Welche Kacheln ein Paar überhaupt sieht, steht in Supabase (tile_access);
 // neue Konten bekommen nur DEFAULT_TILES.
 export const HUB_TILES = [
-  { key: 'questionnaire', title: 'Fragebogen', subtitle: 'Hier fängt alles an', icon: '📝', active: false },
+  { key: 'questionnaire', title: 'Fragebogen', subtitle: 'Hier fängt alles an', icon: '📝', active: true },
   { key: 'wissen', title: 'Wissenssammlung', subtitle: 'Dein Instagram-Ersatz – Social Media à la Wissen', icon: '💡', active: false, featured: true },
   { key: 'start', title: 'Startpunkt', subtitle: 'Ideensammlung', icon: '🧭', active: true },
   { key: 'trackli', title: 'Trackli', subtitle: 'Zykluskalender nach Sensiplan', icon: '🌙', active: true },
