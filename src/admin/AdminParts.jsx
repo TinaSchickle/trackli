@@ -3,7 +3,8 @@ import {
   listInviteCodes,
   createInviteCode,
   deleteInviteCode,
-  adminSetPassword,
+  createResetCode,
+  deleteResetCode,
 } from './api.js';
 
 export const softText = { color: 'var(--color-text-soft)', fontSize: '0.85rem' };
@@ -100,61 +101,89 @@ export function InviteCodes() {
   );
 }
 
-// Passwort eines Kontos neu setzen (es gibt keine Reset-E-Mail).
-export function ResetPassword({ user }) {
-  const [open, setOpen] = useState(false);
-  const [pw, setPw] = useState('');
-  const [msg, setMsg] = useState(null);
-  const [busy, setBusy] = useState(false);
+const RESET_DAYS = 7;
 
-  async function handleSave(e) {
-    e.preventDefault();
+// Passwort-Reset per Code: Die Admin erzeugt pro Konto einen Code und gibt ihn
+// weiter; das Paar setzt damit in der App selbst ein neues Passwort. Danach
+// ist der Code weg (Supabase löscht ihn beim Einlösen).
+export function ResetCode({ userId, resetCode, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  async function run(fn) {
     setBusy(true);
     setMsg(null);
     try {
-      await adminSetPassword(user.id, pw);
-      setMsg('Neues Passwort gesetzt – jetzt dem Paar weitergeben.');
-      setPw('');
-    } catch (err) {
-      const m = err?.message || String(err);
-      setMsg(/PASSWORD_TOO_SHORT/.test(m) ? 'Mindestens 6 Zeichen.' : m);
+      await fn();
+    } catch (e) {
+      const m = e?.message || String(e);
+      setMsg(
+        /password_reset_codes|schema cache/i.test(m)
+          ? 'Reset-Codes sind in Supabase noch nicht eingerichtet (SQL „Passwort-Reset-Codes“ ausführen).'
+          : m
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className="btn-secondary"
-        style={{ fontSize: '0.8rem', padding: '4px 10px', marginTop: 8 }}
-        onClick={() => setOpen(true)}
-      >
-        Passwort zurücksetzen
-      </button>
-    );
-  }
+  const expires = resetCode
+    ? new Date(new Date(resetCode.created_at).getTime() + RESET_DAYS * 86400000)
+    : null;
+  const expired = expires && expires < new Date();
+  const btn = { fontSize: '0.8rem', padding: '4px 10px' };
+
   return (
-    <form onSubmit={handleSave} style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-      <input
-        type="text"
-        required
-        minLength={6}
-        autoComplete="off"
-        placeholder="Neues Passwort"
-        value={pw}
-        onChange={(e) => setPw(e.target.value)}
-        style={{ flex: 1, minWidth: 0 }}
-      />
-      <button type="submit" className="btn-secondary" disabled={busy} style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
-        {busy ? '…' : 'Setzen'}
-      </button>
-      {msg && <div style={{ ...softText, width: '100%' }}>{msg}</div>}
-    </form>
+    <div className="adm-reset">
+      {resetCode ? (
+        <>
+          <div>
+            Reset-Code: <strong style={{ letterSpacing: '0.12em' }}>{resetCode.code}</strong>
+            <div style={softText}>
+              {expired
+                ? 'abgelaufen – bitte neu erzeugen'
+                : `gültig bis ${expires.toLocaleDateString('de-DE')} · verschwindet, sobald eingelöst`}
+            </div>
+          </div>
+          <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button type="button" className="btn-secondary" style={btn} onClick={() => navigator.clipboard?.writeText(resetCode.code)}>
+              Kopieren
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={btn}
+              disabled={busy}
+              onClick={() => run(async () => onChange(await createResetCode(userId)))}
+            >
+              Neu erzeugen
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={btn}
+              disabled={busy}
+              onClick={() => run(async () => {
+                await deleteResetCode(userId);
+                onChange(null);
+              })}
+            >
+              Löschen
+            </button>
+          </span>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="btn-secondary"
+          style={btn}
+          disabled={busy}
+          onClick={() => run(async () => onChange(await createResetCode(userId)))}
+        >
+          {busy ? 'Erzeugt…' : 'Passwort-Reset-Code erzeugen'}
+        </button>
+      )}
+      {msg && <div style={{ ...softText, width: '100%', color: 'var(--color-danger, #b3261e)' }}>{msg}</div>}
+    </div>
   );
 }
-
-// Admin-Ansicht: Liste aller registrierten Konten (nur E-Mail + Anmeldedatum,
-// keine Zyklusdaten). Die Daten liefert die "profiles"-Tabelle; welche Zeilen
-// sichtbar sind, entscheidet die Row-Level-Security in Supabase.

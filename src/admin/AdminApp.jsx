@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
 import { getUser, onAuthChange, isAdmin, signIn, signOut, displayLogin } from '../cloud/auth.js';
-import { adminOverview, adminSetTiles, listInviteCodes } from './api.js';
+import { adminOverview, adminSetTiles, listInviteCodes, listResetCodes } from './api.js';
 import { HUB_TILES } from '../tiles.js';
 import { CARDS } from '../funDates/cards.js';
-import { InviteCodes, ResetPassword, softText } from './AdminParts.jsx';
+import { InviteCodes, ResetCode, softText } from './AdminParts.jsx';
 
 // Eigene Admin-Seite (admin.html), getrennt von der App der Paare: Der Code
 // hier wird dort nie geladen. Die eigentliche Absicherung liegt trotzdem in
@@ -144,7 +144,7 @@ function TileMatrix({ rows, onTilesChange }) {
 }
 
 // inviteCode: der Zugangscode, mit dem dieses Konto angelegt wurde (oder null).
-function CoupleCard({ row, inviteCode }) {
+function CoupleCard({ row, inviteCode, resetCode, onResetCodeChange }) {
   const names = [row.her_name, row.his_name].filter(Boolean).join(' & ');
   const admin = isAdmin({ email: row.email });
   return (
@@ -189,7 +189,12 @@ function CoupleCard({ row, inviteCode }) {
         </div>
       </section>
 
-      {!admin && <ResetPassword user={{ id: row.user_id }} />}
+      {!admin && (
+        <section>
+          <h4>Passwort vergessen?</h4>
+          <ResetCode userId={row.user_id} resetCode={resetCode} onChange={onResetCodeChange} />
+        </section>
+      )}
     </article>
   );
 }
@@ -197,14 +202,16 @@ function CoupleCard({ row, inviteCode }) {
 function Overview() {
   const [rows, setRows] = useState(null);
   const [codeByUser, setCodeByUser] = useState({});
+  const [resetByUser, setResetByUser] = useState({});
   const [error, setError] = useState(null);
 
   function reload() {
     setError(null);
     // Codes dazuladen, um jedem Konto seinen eingelösten Code zuzuordnen.
-    Promise.all([adminOverview(), listInviteCodes().catch(() => [])])
-      .then(([overview, codes]) => {
+    Promise.all([adminOverview(), listInviteCodes().catch(() => []), listResetCodes().catch(() => [])])
+      .then(([overview, codes, resets]) => {
         setCodeByUser(Object.fromEntries(codes.filter((c) => c.used_by).map((c) => [c.used_by, c])));
+        setResetByUser(Object.fromEntries(resets.map((r) => [r.user_id, r])));
         setRows(overview);
       })
       .catch((e) => {
@@ -247,7 +254,13 @@ function Overview() {
       <p style={softText}>Ohne Zyklusdaten und ohne Selfies – die bleiben privat beim Paar.</p>
       <div className="adm-grid">
         {rows.map((r) => (
-          <CoupleCard key={r.user_id} row={r} inviteCode={codeByUser[r.user_id] ?? null} />
+          <CoupleCard
+            key={r.user_id}
+            row={r}
+            inviteCode={codeByUser[r.user_id] ?? null}
+            resetCode={resetByUser[r.user_id] ?? null}
+            onResetCodeChange={(rc) => setResetByUser((prev) => ({ ...prev, [r.user_id]: rc }))}
+          />
         ))}
       </div>
     </>

@@ -456,3 +456,73 @@ $$;
 
 revoke execute on function public.admin_overview() from public, anon;
 grant execute on function public.admin_overview() to authenticated;
+
+-- ── Passwort-Reset-Codes ────────────────────────────────────────────────────
+-- Paare haben keine echte E-Mail, also keinen Reset-Link. Stattdessen erzeugt
+-- die Admin pro Konto einen Reset-Code (7 Tage gültig, ein neuer ersetzt den
+-- alten). Das Paar gibt ihn in der App ein und setzt ein neues Passwort;
+-- danach wird der Code gelöscht.
+create table if not exists public.password_reset_codes (
+  code        text primary key,
+  user_id     uuid not null unique references auth.users (id) on delete cascade,
+  created_at  timestamptz not null default now()
+);
+
+alter table public.password_reset_codes enable row level security;
+
+drop policy if exists "reset codes nur admin" on public.password_reset_codes;
+create policy "reset codes nur admin"
+  on public.password_reset_codes
+  for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+grant select, insert, update, delete on public.password_reset_codes to authenticated;
+
+-- Vorab-Prüfung in der App („Code ok?“).
+create or replace function public.reset_code_valid(p_code text)
+returns boolean
+language sql
+security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.password_reset_codes
+    where code = upper(trim(p_code))
+      and created_at > now() - interval '7 days'
+  );
+$$;
+
+grant execute on function public.reset_code_valid(text) to anon, authenticated;
+
+-- Code einlösen: neues Passwort setzen, Code löschen. Gibt die Login-Adresse
+-- des Kontos zurück, damit die App direkt anmelden kann.
+create or replace function public.redeem_reset_code(p_code text, p_password text)
+returns text
+language plpgsql
+security definer set search_path = public, extensions
+as $$
+declare
+  v_user uuid;
+  v_email text;
+begin
+  if length(coalesce(p_password, '')) < 6 then
+    raise exception 'PASSWORD_TOO_SHORT';
+  end if;
+  delete from public.password_reset_codes
+   where code = upper(trim(p_code))
+     and created_at > now() - interval '7 days'
+  returning user_id into v_user;
+  if v_user is null then
+    raise exception 'INVALID_RESET_CODE';
+  end if;
+  update auth.users
+     set encrypted_password = crypt(p_password, gen_salt('bf')),
+         updated_at = now()
+   where id = v_user
+  returning email into v_email;
+  return v_email;
+end;
+$$;
+
+revoke execute on function public.redeem_reset_code(text, text) from public;
+grant execute on function public.redeem_reset_code(text, text) to anon, authenticated;

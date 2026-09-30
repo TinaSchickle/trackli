@@ -238,3 +238,12 @@
 .adm-cell.is-on:disabled {
   opacity: 0.55;
 }
+
+.adm-reset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}

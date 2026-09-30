@@ -3,6 +3,8 @@ import {
   signIn,
   checkInviteCode,
   redeemInviteCode,
+  checkResetCode,
+  redeemResetCode,
   normalizeUsername,
   suggestUsername,
   USERNAME_PATTERN,
@@ -14,6 +16,8 @@ function humanError(err) {
   if (/invalid login credentials/i.test(msg)) return 'Benutzername oder Passwort falsch.';
   if (/user already registered|already been registered/i.test(msg))
     return 'Diesen Benutzernamen gibt es schon. Bitte einen anderen wählen.';
+  if (/INVALID_RESET_CODE/i.test(msg)) return 'Der Reset-Code ist ungültig oder abgelaufen.';
+  if (/PASSWORD_TOO_SHORT/i.test(msg)) return 'Passwort zu kurz (mind. 6 Zeichen).';
   if (/INVALID_INVITE_CODE|database error saving new user/i.test(msg))
     return 'Der Zugangscode ist ungültig oder wurde schon benutzt.';
   if (/password should be at least/i.test(msg)) return 'Passwort zu kurz (mind. 6 Zeichen).';
@@ -43,6 +47,8 @@ const linkStyle = {
 //   'signin' – Benutzername + Passwort
 //   'code'   – Zugangscode eingeben
 //   'setup'  – nach gültigem Code: Namen, Benutzername, Passwort festlegen
+//   'reset'  – Passwort vergessen: Reset-Code von Tina eingeben
+//   'resetPw'– nach gültigem Reset-Code: neues Passwort festlegen
 export default function LoginPanel() {
   const [step, setStep] = useState('signin');
   const [login, setLogin] = useState('');
@@ -58,12 +64,11 @@ export default function LoginPanel() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [forgot, setForgot] = useState(false);
+  const [resetCode, setResetCode] = useState('');
 
   function goTo(next) {
     setStep(next);
     setError(null);
-    setForgot(false);
     setPassword('');
     setPassword2('');
   }
@@ -94,6 +99,25 @@ export default function LoginPanel() {
     });
   }
 
+  function handleResetCode(e) {
+    e.preventDefault();
+    run(async () => {
+      if (await checkResetCode(resetCode)) goTo('resetPw');
+      else setError('Der Reset-Code ist ungültig oder abgelaufen.');
+    });
+  }
+
+  function handleResetPassword(e) {
+    e.preventDefault();
+    if (password !== password2) {
+      setError('Die beiden Passwörter stimmen nicht überein.');
+      return;
+    }
+    // Nach Erfolg meldet redeemResetCode an; der Auth-Listener in App schließt
+    // den Dialog.
+    run(() => redeemResetCode(resetCode, password));
+  }
+
   function handleSetup(e) {
     e.preventDefault();
     const name = normalizeUsername(username);
@@ -111,6 +135,76 @@ export default function LoginPanel() {
   const errorEl = error && (
     <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 0 }}>{error}</p>
   );
+
+  if (step === 'reset') {
+    return (
+      <>
+        <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
+          Passwort vergessen? Fordere bei Tina einen <strong>Passwort-Reset-Code</strong> an und
+          gib ihn hier ein.
+        </p>
+        <form onSubmit={handleResetCode}>
+          <label style={labelStyle}>Passwort-Reset-Code</label>
+          <input
+            type="text"
+            required
+            autoComplete="off"
+            autoCapitalize="characters"
+            value={resetCode}
+            onChange={(e) => setResetCode(e.target.value.toUpperCase())}
+            style={{ ...inputStyle, letterSpacing: '0.15em', fontWeight: 600 }}
+          />
+          {errorEl}
+          <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
+            {busy ? 'Bitte warten…' : 'Weiter'}
+          </button>
+        </form>
+        <button type="button" style={linkStyle} onClick={() => goTo('signin')}>
+          Zurück zum Anmelden
+        </button>
+      </>
+    );
+  }
+
+  if (step === 'resetPw') {
+    return (
+      <>
+        <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
+          Code passt! Legt jetzt ein neues Passwort fest – gern wieder aus eurem Leitsatz.
+        </p>
+        <form onSubmit={handleResetPassword}>
+          <label style={labelStyle}>Neues Passwort</label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={inputStyle}
+          />
+          <label style={labelStyle}>Neues Passwort wiederholen</label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            style={{ ...inputStyle, marginBottom: 8 }}
+          />
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.85rem', marginBottom: 14 }}>
+            <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+            Passwort anzeigen
+          </label>
+          {errorEl}
+          <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
+            {busy ? 'Bitte warten…' : 'Passwort speichern & anmelden'}
+          </button>
+        </form>
+      </>
+    );
+  }
 
   if (step === 'code') {
     return (
@@ -273,14 +367,9 @@ export default function LoginPanel() {
         <button className="btn-primary" type="submit" disabled={busy} style={{ marginBottom: 10 }}>
           {busy ? 'Bitte warten…' : 'Anmelden'}
         </button>
-        <button type="button" style={linkStyle} onClick={() => setForgot(true)}>
+        <button type="button" style={linkStyle} onClick={() => goTo('reset')}>
           Passwort vergessen?
         </button>
-        {forgot && (
-          <p style={{ color: 'var(--color-text-soft)', fontSize: '0.85rem', marginTop: 0 }}>
-            Schreib Tina, sie wird dein Passwort für dich zurücksetzen.
-          </p>
-        )}
       </form>
       <button className="btn-secondary" onClick={() => goTo('code')} style={{ width: '100%' }}>
         Ich habe einen Zugangscode

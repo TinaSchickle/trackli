@@ -112,6 +112,25 @@ export function normalizeCode(code) {
   return code.trim().toUpperCase();
 }
 
+// ── Passwort-Reset per Code (von der Admin erzeugt) ──────────────────────────
+export async function checkResetCode(code) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const { data, error } = await supabase.rpc('reset_code_valid', { p_code: normalizeCode(code) });
+  if (error) throw error;
+  return data === true;
+}
+
+// Setzt mit dem Code ein neues Passwort und meldet danach direkt an.
+export async function redeemResetCode(code, password) {
+  if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
+  const { data: email, error } = await supabase.rpc('redeem_reset_code', {
+    p_code: normalizeCode(code),
+    p_password: password,
+  });
+  if (error) throw error;
+  await signIn(email, password);
+}
+
 export async function checkInviteCode(code) {
   if (!isCloudConfigured) throw new Error('Cloud nicht eingerichtet');
   const { data, error } = await supabase.rpc('invite_code_valid', { p_code: normalizeCode(code) });
