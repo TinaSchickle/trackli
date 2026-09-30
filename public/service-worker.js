@@ -22,8 +22,15 @@ self.addEventListener('activate', (event) => {
 });
 
 // Cache-first für gebaute Assets, Netzwerk-Fallback sonst.
+//
+// NUR eigene App-Dateien (gleiche Herkunft) cachen – niemals Anfragen an
+// Supabase oder andere Server. Sonst würden Datenabfragen (Einträge,
+// Zugangscodes, Kachel-Freischaltung …) bis zum nächsten Deploy veraltet aus
+// dem Cache kommen, und nach einem Kontowechsel auf demselben Gerät könnten
+// gecachte Antworten des vorherigen Kontos auftauchen.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     caches.match(event.request).then(
       (cached) =>
