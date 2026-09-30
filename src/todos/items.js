@@ -17,4 +17,10 @@ export const TODO_ITEMS = [
       'Einer der Easy Tasks der Daily Challenge',
     ],
   },
+  {
+    id: 'buddies',
+    title: 'Buddies',
+    icon: '🤝',
+    notes: ['Auch schon bei erst 2 Klient*innen – damit die beiden sich verbinden können'],
+  },
 ];
