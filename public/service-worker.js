@@ -28,9 +28,26 @@ self.addEventListener('activate', (event) => {
 // Zugangscodes, Kachel-Freischaltung …) bis zum nächsten Deploy veraltet aus
 // dem Cache kommen, und nach einem Kontowechsel auf demselben Gerät könnten
 // gecachte Antworten des vorherigen Kontos auftauchen.
+//
+// Seiten (index.html, admin.html) dagegen network-first: sie verweisen auf die
+// gehashten Bundles des jeweiligen Builds. Kämen sie aus dem Cache, bliebe
+// z. B. die Admin-Seite (die selbst keine SW-Updates anstößt) dauerhaft auf
+// einem alten Stand hängen – etwa ohne neu hinzugekommene Kacheln.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (new URL(event.request.url).origin !== self.location.origin) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(
       (cached) =>
