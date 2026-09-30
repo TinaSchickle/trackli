@@ -29,6 +29,7 @@ export const LIVE_IDEAS = [
     title: 'TRE Session',
     icon: '🫨',
     notes: [
+      'Format: Gruppencall',
       'Zittern auslösen: Beine zusammen – oder auf andere Weise auslösen?',
       'In Kombination mit Breathwork und kraftvoller Musik',
       'Dahinter eine eigene geführte Meditation',
@@ -39,6 +40,7 @@ export const LIVE_IDEAS = [
     title: 'Frust Breathwork Session',
     icon: '🎈',
     notes: [
+      'Format: Gruppencall',
       'Luftballon füllen und platzen lassen',
       'Thema: Frust, Druck, Angst, dass es wieder nicht klappt …',
       'In einen Luftballon reinatmen: Ein puddingartiger, schleimiger Strang verlässt das Gehirn und fließt in den Luftballon zwischen den Händen.',
