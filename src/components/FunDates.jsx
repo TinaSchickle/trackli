@@ -36,7 +36,7 @@ const VARIANTS = {
       { text: 'Neues Abenteuer!', color: '#fff27a', pin: 'red' },
       { text: 'Nur wir zwei ♥', color: '#ffc4d6', pin: 'blue' },
     ],
-    againLabel: "Let's have fun 🎉",
+    againLabel: 'Neu filtern 🔍',
   },
   sexy: {
     eyebrow: 'Nur für euch zwei',
