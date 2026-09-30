@@ -2156,3 +2156,14 @@ textarea:focus-visible {
   color: var(--color-text-soft);
   font-size: 1.05rem;
 }
+
+/* Live Sessions: Notizen zu einer Idee */
+.live-notes {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.live-notes li + li {
+  margin-top: 6px;
+}
