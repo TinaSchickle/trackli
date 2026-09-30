@@ -98,63 +98,69 @@ export async function unmarkCardDone(user, cardId) {
 }
 
 // ── Gemerktes Date ─────────────────────────────────────────────────────────
-// Pro Kachel (variant: 'dates' | 'sexy') kann genau ein Date gemerkt sein,
+// Über Spaß-Dates und Sexy Time hinweg kann genau EIN Date gemerkt sein,
 // damit das Paar erst vorbereiten und später direkt wieder hinspringen kann.
+// Gespeichert wird { variant: 'dates' | 'sexy', cardId }.
 // Angemeldet in Supabase (Tabelle fun_dates_saved, RLS), sonst lokal.
 
 const SAVED_KEY = 'funDatesSaved';
 
 function readSavedLocal() {
   try {
-    return JSON.parse(localStorage.getItem(SAVED_KEY)) ?? {};
+    const raw = JSON.parse(localStorage.getItem(SAVED_KEY));
+    if (!raw) return null;
+    if (raw.cardId) return raw;
+    // Ältere Version: { [variant]: cardId } – den ersten Eintrag übernehmen.
+    const [variant, cardId] = Object.entries(raw)[0] ?? [];
+    return cardId ? { variant, cardId } : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
-function writeSavedLocal(map) {
+function writeSavedLocal(saved) {
   try {
-    localStorage.setItem(SAVED_KEY, JSON.stringify(map));
+    if (saved) localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+    else localStorage.removeItem(SAVED_KEY);
   } catch {
     // Speicher voll/blockiert – dann eben nur für diese Sitzung.
   }
 }
 
-// Liefert die ID des gemerkten Dates oder null.
-export async function getSavedCard(user, variant) {
-  if (!isCloudConfigured || !user) return readSavedLocal()[variant] ?? null;
+// Liefert { variant, cardId } oder null.
+export async function getSavedCard(user) {
+  if (!isCloudConfigured || !user) return readSavedLocal();
   const { data, error } = await supabase
     .from('fun_dates_saved')
-    .select('card_id')
-    .eq('variant', variant)
-    .maybeSingle();
+    .select('variant, card_id')
+    .order('saved_at', { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return data?.card_id ?? null;
+  const row = data?.[0];
+  return row ? { variant: row.variant, cardId: row.card_id } : null;
 }
 
-// Merkt ein Date (ersetzt ein vorher gemerktes).
+// Merkt ein Date und ersetzt dabei jedes vorher gemerkte (auch aus der
+// anderen Kachel).
 export async function saveCard(user, variant, cardId) {
   if (!isCloudConfigured || !user) {
-    writeSavedLocal({ ...readSavedLocal(), [variant]: cardId });
+    writeSavedLocal({ variant, cardId });
     return;
   }
+  const { error: delErr } = await supabase.from('fun_dates_saved').delete().eq('user_id', user.id);
+  if (delErr) throw delErr;
   const { error } = await supabase
     .from('fun_dates_saved')
-    .upsert(
-      { user_id: user.id, variant, card_id: cardId, saved_at: new Date().toISOString() },
-      { onConflict: 'user_id,variant' }
-    );
+    .insert({ user_id: user.id, variant, card_id: cardId });
   if (error) throw error;
 }
 
-export async function clearSavedCard(user, variant) {
+export async function clearSavedCard(user) {
   if (!isCloudConfigured || !user) {
-    const map = readSavedLocal();
-    delete map[variant];
-    writeSavedLocal(map);
+    writeSavedLocal(null);
     return;
   }
-  const { error } = await supabase.from('fun_dates_saved').delete().eq('variant', variant);
+  const { error } = await supabase.from('fun_dates_saved').delete().eq('user_id', user.id);
   if (error) throw error;
 }
 

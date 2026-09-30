@@ -410,8 +410,8 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
   const [openId, setOpenId] = useState(null);
   const [confirmBack, setConfirmBack] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Das eine gemerkte Date dieser Kachel (zum Vorbereiten + Zurückspringen).
-  const [savedId, setSavedId] = useState(null);
+  // Das eine gemerkte Date { variant, cardId } (zum Vorbereiten + Zurückspringen).
+  const [saved, setSaved] = useState(null);
 
   useEffect(() => {
     setLoadError(null);
@@ -419,19 +419,22 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
       .then(setDoneMap)
       .catch(() => setLoadError('Erledigte Dates konnten nicht geladen werden.'));
     // Fehler hier nur still schlucken – ohne gemerktes Date geht alles andere.
-    getSavedCard(user, variant)
-      .then(setSavedId)
-      .catch(() => setSavedId(null));
+    getSavedCard(user)
+      .then(setSaved)
+      .catch(() => setSaved(null));
   }, [user, variant]);
 
   const openCard = useMemo(() => cards.find((c) => c.id === openId), [cards, openId]);
+  // Gemerkt sein kann nur ein Date über beide Kacheln – hier zählt es nur,
+  // wenn es zu dieser Kachel gehört.
+  const savedId = saved?.variant === variant ? saved.cardId : null;
   const savedCard = useMemo(() => cards.find((c) => c.id === savedId), [cards, savedId]);
 
-  async function runSaved(action, nextId) {
+  async function runSaved(action, next) {
     setBusy(true);
     try {
       await action();
-      setSavedId(nextId);
+      setSaved(next);
     } catch {
       setLoadError('Speichern hat nicht geklappt. Bitte später nochmal versuchen.');
     } finally {
@@ -439,8 +442,22 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
     }
   }
 
-  const handleSave = () => runSaved(() => saveCard(user, variant, openId), openId);
-  const handleUnsave = () => runSaved(() => clearSavedCard(user, variant), null);
+  function handleSave() {
+    if (saved && saved.cardId !== openId) {
+      const other = VARIANTS[saved.variant];
+      const title = other?.cards.find((c) => c.id === saved.cardId)?.title;
+      if (title) {
+        const where = saved.variant === variant ? '' : ` (${other.title})`;
+        const ok = window.confirm(
+          `Ihr habt schon „${title}“${where} gemerkt. Es kann immer nur ein Date gemerkt sein – stattdessen dieses merken?`
+        );
+        if (!ok) return;
+      }
+    }
+    runSaved(() => saveCard(user, variant, openId), { variant, cardId: openId });
+  }
+
+  const handleUnsave = () => runSaved(() => clearSavedCard(user), null);
 
   function openSaved() {
     setOpenId(savedId);
@@ -494,7 +511,7 @@ export default function FunDates({ user, onHome, variant = 'dates' }) {
     setSelfieOpen(false);
     // Erledigt – dann braucht es auch nicht mehr gemerkt zu sein.
     if (openId === savedId) {
-      clearSavedCard(user, variant).then(() => setSavedId(null), () => {});
+      clearSavedCard(user).then(() => setSaved(null), () => {});
     }
   }
 

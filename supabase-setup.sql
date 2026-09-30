@@ -202,7 +202,8 @@ create policy "fun dates sind privat"
 grant select, insert, update, delete on public.fun_dates_done to authenticated;
 
 -- ── Spaß-Dates / Sexy Time: gemerktes Date ───────────────────────────────────
--- Pro Konto und Kachel (variant 'dates' | 'sexy') genau ein gemerktes Date,
+-- Pro Konto genau ein gemerktes Date über beide Kacheln (die App löscht beim
+-- Merken alle alten Zeilen; variant 'dates' | 'sexy' sagt, wo es hingehört),
 -- damit das Paar erst vorbereiten und später direkt wieder hinspringen kann.
 create table if not exists public.fun_dates_saved (
   user_id   uuid        not null references auth.users (id) on delete cascade,
