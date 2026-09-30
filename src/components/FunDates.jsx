@@ -18,18 +18,8 @@ const QUESTIONS = [
   { key: 'foods', title: 'Mit Essen oder ohne?', options: FOOD_OPTIONS },
 ];
 
-// Pinnwand-Deko: Nadelfarben, Post-it-Farben und -Sprüche.
+// Pinnwand-Deko: Nadelfarben.
 const PIN_COLORS = ['red', 'blue', 'brass', 'green', 'red'];
-const NOTE_COLORS = ['#fff27a', '#ffc4d6', '#bfe8ff', '#c8f2b8', '#ffd59e'];
-const NOTE_TEXTS = [
-  'Neues Abenteuer!',
-  'Handy weg!',
-  'Kuss nicht vergessen ♥',
-  'Nur wir zwei',
-  'Das wird lustig!',
-  'Wer verliert, spült 😜',
-  'Heute?',
-];
 // Hintergrund der „Fotos“ auf den verdeckten Karten.
 const PHOTO_BGS = [
   'linear-gradient(160deg, #ffd9a0, #f49a6c)',
@@ -349,16 +339,6 @@ export default function FunDates({ user, onHome }) {
         id: c.id,
         pin: PIN_COLORS[Math.floor(Math.random() * PIN_COLORS.length)],
         pinX: rand(35, 65),
-        // Ungefähr jede zweite Karte bekommt einen Post-it an eine Ecke.
-        note:
-          Math.random() < 0.5
-            ? {
-                text: NOTE_TEXTS[Math.floor(Math.random() * NOTE_TEXTS.length)],
-                color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
-                corner: ['tl', 'tr', 'bl', 'br'][Math.floor(Math.random() * 4)],
-                tilt: rand(-12, 12),
-              }
-            : null,
         tilt: rand(-5, 5),
         fromX: rand(-160, 160),
         fromY: rand(-260, -80),
@@ -472,20 +452,18 @@ export default function FunDates({ user, onHome }) {
       <div className="fd-board">
         {!deck && (
           <div className="fd-board-empty">
-            <span className="fd-sticky is-deco" style={{ '--note': '#fff27a', top: 18, left: 14, '--rot': '-8deg' }}>
+            <span className="fd-sticky is-deco is-start" style={{ '--note': '#fff27a', '--rot': '-8deg' }}>
               <span className="fd-sticky-pin is-red" />Neues Abenteuer!
             </span>
-            <span className="fd-sticky is-deco" style={{ '--note': '#ffc4d6', bottom: 20, right: 14, '--rot': '6deg' }}>
-              <span className="fd-sticky-pin is-blue" />Nur wir zwei ♥
-            </span>
-            <div className="fd-banner">
+            <button type="button" className="fd-banner" onClick={() => setQuizOpen(true)}>
               <span className="fd-tape is-left" />
               May the Fun begin
+              <span className="fd-banner-hint">hier klicken 👆</span>
               <span className="fd-tape is-right" />
-            </div>
-            <button type="button" className="btn-primary fd-go" onClick={() => setQuizOpen(true)}>
-              Let's have fun 🎉
             </button>
+            <span className="fd-sticky is-deco is-end" style={{ '--note': '#ffc4d6', '--rot': '6deg' }}>
+              <span className="fd-sticky-pin is-blue" />Nur wir zwei ♥
+            </span>
           </div>
         )}
 
@@ -549,15 +527,6 @@ export default function FunDates({ user, onHome }) {
                       {done && <span className="fd-done-stamp">✓ gemacht</span>}
                     </span>
                   </span>
-                  {d.note && (
-                    <span
-                      className={`fd-sticky is-${d.note.corner}`}
-                      style={{ '--note': d.note.color, '--rot': `${d.note.tilt}deg` }}
-                      aria-hidden="true"
-                    >
-                      {d.note.text}
-                    </span>
-                  )}
                 </button>
               );
             })}
