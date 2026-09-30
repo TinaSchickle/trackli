@@ -22,7 +22,7 @@ const {
   VAPID_PRIVATE_KEY,
   VAPID_SUBJECT,
   REMINDER_TZ = 'Europe/Berlin',
-  REMINDER_HOUR: DEFAULT_REMINDER_HOUR = '20', // Fallback für Nutzer ohne eigene Einstellung
+  REMINDER_HOUR: DEFAULT_REMINDER_HOUR = '8', // Fallback für Nutzer ohne eigene Einstellung
   REMINDER_MINUTE: DEFAULT_REMINDER_MINUTE = '0',
   FORCE_RUN,
 } = process.env;

@@ -91,7 +91,13 @@ export async function syncSubscription() {
     const user = await getUser();
     if (!user) return;
     const sub = await getExistingSubscription();
-    if (!sub) return;
+    // Die Erinnerung ist immer aktiv: Hat das Gerät schon die Erlaubnis, aber
+    // (noch) keine Subscription, still anmelden. Ohne Erlaubnis geht das nicht
+    // – die muss per Klick im Konto-Dialog geholt werden.
+    if (!sub) {
+      if (Notification.permission === 'granted') await enableDailyReminder();
+      return;
+    }
 
     const json = sub.toJSON();
     const previousEndpoint = localStorage.getItem(LOCAL_ENDPOINT_KEY);
@@ -116,27 +122,7 @@ export async function syncSubscription() {
   }
 }
 
-/** Deaktiviert die Erinnerung wieder: Browser-Subscription + Supabase-Zeile löschen. */
-export async function disableDailyReminder() {
-  const sub = await getExistingSubscription();
-  if (!sub) return;
-  const endpoint = sub.endpoint;
-  await sub.unsubscribe();
-  if (isCloudConfigured) {
-    const user = await getUser();
-    if (user) {
-      await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', endpoint);
-    }
-  }
-  localStorage.removeItem(LOCAL_ENDPOINT_KEY);
-}
-
-export async function isDailyReminderEnabled() {
-  const sub = await getExistingSubscription();
-  return Boolean(sub);
-}
-
-const DEFAULT_REMINDER_TIME = { hour: 20, minute: 0 };
+export const DEFAULT_REMINDER_TIME = { hour: 8, minute: 0 };
 
 /** Eingestellte Erinnerungszeit ({hour, minute}, minute ist 0 oder 30) des Kontos, sonst Default. */
 export async function getReminderTime() {

@@ -5,16 +5,14 @@ import {
   isAdmin,
   updatePassword,
   getCoupleNames,
-  updateCoupleNames,
   displayLogin,
 } from '../cloud/auth.js';
 import {
   isPushSupported,
   isPushConfigured,
-  isDailyReminderEnabled,
   enableDailyReminder,
-  disableDailyReminder,
   getReminderTime,
+  DEFAULT_REMINDER_TIME,
   setReminderTime,
 } from '../cloud/push.js';
 import InfoToggle from './InfoToggle.jsx';
@@ -40,6 +38,13 @@ function humanError(err) {
   return msg;
 }
 
+// "Tina und Pascal" aus den Paar-Namen; ohne Namen der Login als Fallback.
+function accountLabel(user) {
+  const { her, him } = getCoupleNames(user);
+  const names = [her, him].filter(Boolean).join(' und ');
+  return names || displayLogin(user);
+}
+
 export default function AccountModal({
   user,
   syncing,
@@ -50,49 +55,31 @@ export default function AccountModal({
   onClose,
 }) {
   const [password, setPassword] = useState('');
-  const [herName, setHerName] = useState('');
-  const [hisName, setHisName] = useState('');
-  const [namesSaving, setNamesSaving] = useState(false);
-  const [namesInfo, setNamesInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [reminderOn, setReminderOn] = useState(false);
+  // Die Erinnerung ist immer aktiv; offen ist höchstens noch die
+  // Benachrichtigungs-Erlaubnis dieses Geräts (braucht einen Klick).
+  const [needsPermission, setNeedsPermission] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState(null);
   // reminderTime ist der Entwurf im Dropdown, savedReminderTime der zuletzt
   // tatsächlich gespeicherte Wert. Getrennt, damit ein Scrollen durchs native
   // Auswahlrad (feuert auf Android manchmal Zwischen-onChange-Events) nicht
   // sofort ungewollt speichert – erst der "Übernehmen"-Klick persistiert.
-  const [reminderTime, setReminderTimeState] = useState({ hour: 20, minute: 0 });
-  const [savedReminderTime, setSavedReminderTime] = useState({ hour: 20, minute: 0 });
+  const [reminderTime, setReminderTimeState] = useState(DEFAULT_REMINDER_TIME);
+  const [savedReminderTime, setSavedReminderTime] = useState(DEFAULT_REMINDER_TIME);
   const [reminderTimeSaving, setReminderTimeSaving] = useState(false);
-
-  // Namensfelder für angemeldete Konten mit den gespeicherten Namen vorbelegen.
-  useEffect(() => {
-    if (user) {
-      const { her, him } = getCoupleNames(user);
-      setHerName(her);
-      setHisName(him);
-    }
-  }, [user]);
-
-  async function handleSaveNames(e) {
-    e.preventDefault();
-    setNamesInfo(null);
-    setNamesSaving(true);
-    try {
-      await updateCoupleNames({ her: herName, him: hisName });
-      setNamesInfo('Gespeichert.');
-    } catch (err) {
-      setNamesInfo(humanError(err));
-    } finally {
-      setNamesSaving(false);
-    }
-  }
 
   useEffect(() => {
     if (isCloudConfigured && user) {
-      isDailyReminderEnabled().then(setReminderOn).catch((err) => setReminderError(humanError(err)));
+      if (isPushConfigured && isPushSupported()) {
+        if (Notification.permission === 'granted') {
+          // Subscription sicherstellen (idempotent), falls sie fehlt.
+          enableDailyReminder().catch((err) => setReminderError(humanError(err)));
+        } else {
+          setNeedsPermission(true);
+        }
+      }
       getReminderTime()
         .then((t) => {
           setReminderTimeState(t);
@@ -122,22 +109,17 @@ export default function AccountModal({
     }
   }
 
-  async function handleToggleReminder() {
+  async function handleAllowNotifications() {
     setReminderError(null);
     setReminderBusy(true);
     try {
-      if (reminderOn) {
-        await disableDailyReminder();
-        setReminderOn(false);
-      } else {
-        const result = await enableDailyReminder();
-        if (result === 'granted') {
-          setReminderOn(true);
-        } else if (result === 'denied') {
-          setReminderError('Benachrichtigungen wurden blockiert – Erlaubnis in den Handy-/Browser-Einstellungen für diese Seite ändern.');
-        } else if (result === 'unsupported') {
-          setReminderError('Push-Benachrichtigungen werden auf diesem Gerät/Browser nicht unterstützt (bei iPhone: App über „Zum Home-Bildschirm" installieren und von dort öffnen).');
-        }
+      const result = await enableDailyReminder();
+      if (result === 'granted') {
+        setNeedsPermission(false);
+      } else if (result === 'denied') {
+        setReminderError('Benachrichtigungen wurden blockiert – Erlaubnis in den Handy-/Browser-Einstellungen für diese Seite ändern.');
+      } else if (result === 'unsupported') {
+        setReminderError('Push-Benachrichtigungen werden auf diesem Gerät/Browser nicht unterstützt (bei iPhone: App über „Zum Home-Bildschirm" installieren und von dort öffnen).');
       }
     } catch (err) {
       setReminderError(humanError(err));
@@ -218,7 +200,7 @@ export default function AccountModal({
         {isCloudConfigured && user && !recovery && (
           <>
             <p style={{ color: 'var(--color-text-soft)', fontSize: '0.92rem', marginTop: 0 }}>
-              Angemeldet als <strong>{displayLogin(user)}</strong>
+              Angemeldet als <strong>{accountLabel(user)}</strong>
               {isAdmin(user) && ' (Administrator)'}.
             </p>
             <div
@@ -236,61 +218,14 @@ export default function AccountModal({
                     ? `Zuletzt synchronisiert: ${new Date(lastSyncAt).toLocaleString('de-DE')}`
                     : 'Noch nicht synchronisiert.'}
             </div>
-            <form onSubmit={handleSaveNames} style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
-                  Ihr Name
-                  <input
-                    type="text"
-                    required
-                    value={herName}
-                    onChange={(e) => setHerName(e.target.value)}
-                    style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
-                  />
-                </label>
-                <label style={{ flex: 1, minWidth: 0, fontSize: '0.85rem' }}>
-                  Sein Name
-                  <input
-                    type="text"
-                    required
-                    value={hisName}
-                    onChange={(e) => setHisName(e.target.value)}
-                    style={{ width: '100%', marginTop: 4, boxSizing: 'border-box' }}
-                  />
-                </label>
-              </div>
-              {(herName.trim() !== getCoupleNames(user).her ||
-                hisName.trim() !== getCoupleNames(user).him) && (
-                <button
-                  type="submit"
-                  className="btn-secondary"
-                  disabled={namesSaving}
-                  style={{ marginTop: 8, fontSize: '0.8rem', padding: '2px 8px' }}
-                >
-                  {namesSaving ? 'Speichert…' : 'Namen speichern'}
-                </button>
-              )}
-              {namesInfo && (
-                <p style={{ color: 'var(--color-text-soft)', fontSize: '0.85rem', margin: '6px 0 0' }}>
-                  {namesInfo}
-                </p>
-              )}
-            </form>
             {isPushConfigured && (
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.9rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={reminderOn}
-                    disabled={reminderBusy || !isPushSupported()}
-                    onChange={handleToggleReminder}
-                    style={{ marginTop: 3, flexShrink: 0 }}
-                  />
-                  <span style={{ minWidth: 0 }}>
+                <label style={{ display: 'block', fontSize: '0.9rem' }}>
+                  <span>
                     Erinnere mich um{' '}
                     <select
                       value={`${reminderTime.hour}:${reminderTime.minute}`}
-                      disabled={!reminderOn || reminderBusy}
+                      disabled={reminderBusy}
                       onChange={handleChangeTime}
                       style={{ fontSize: '0.9rem' }}
                     >
@@ -301,8 +236,7 @@ export default function AccountModal({
                       ))}
                     </select>{' '}
                     Uhr, falls bis dahin noch Parameter für den Tag fehlen.
-                    {reminderOn &&
-                      (reminderTime.hour !== savedReminderTime.hour ||
+                    {(reminderTime.hour !== savedReminderTime.hour ||
                         reminderTime.minute !== savedReminderTime.minute) && (
                         <button
                           type="button"
@@ -322,6 +256,17 @@ export default function AccountModal({
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <InfoToggle text={REMINDER_MODULES_INFO} />
                 </div>
+                {needsPermission && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleAllowNotifications}
+                    disabled={reminderBusy}
+                    style={{ width: '100%', marginTop: 6 }}
+                  >
+                    {reminderBusy ? 'Bitte warten…' : 'Benachrichtigungen auf diesem Gerät erlauben'}
+                  </button>
+                )}
                 {reminderError && (
                   <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
                     {reminderError}
