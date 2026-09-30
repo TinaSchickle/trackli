@@ -199,7 +199,8 @@ function CoupleCard({ row, inviteCode, resetCode, onResetCodeChange }) {
   );
 }
 
-function Overview() {
+// onRefresh: lädt Übersicht UND Zugangscodes neu (beide werden neu aufgebaut).
+function Overview({ onRefresh }) {
   const [rows, setRows] = useState(null);
   const [codeByUser, setCodeByUser] = useState({});
   const [resetByUser, setResetByUser] = useState({});
@@ -234,7 +235,7 @@ function Overview() {
     <>
       <div className="adm-section-head">
         <h2>Paare ({couples.length})</h2>
-        <button type="button" className="btn-secondary" onClick={reload}>
+        <button type="button" className="btn-secondary" onClick={onRefresh}>
           Aktualisieren
         </button>
       </div>
@@ -269,6 +270,8 @@ function Overview() {
 
 export default function AdminApp() {
   const [user, setUser] = useState(undefined);
+  // Hochzählen baut Übersicht und Code-Liste neu auf = beides frisch laden.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!isCloudConfigured) {
@@ -299,9 +302,9 @@ export default function AdminApp() {
   } else {
     content = (
       <>
-        <Overview />
+        <Overview key={refreshKey} onRefresh={() => setRefreshKey((k) => k + 1)} />
         <div className="card adm-codes">
-          <InviteCodes />
+          <InviteCodes key={refreshKey} />
         </div>
       </>
     );
