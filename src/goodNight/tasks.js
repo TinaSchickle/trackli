@@ -10,5 +10,7 @@ export const GOOD_NIGHT_TASKS = [
   { id: 'morgen', title: 'Eine Sache für morgen vorbereiten', hint: 'Kleidung, Tasche oder Frühstück.', icon: '🧺' },
   { id: 'danke', title: '3 schöne Momente von heute', hint: 'Laut sagen oder kurz aufschreiben.', icon: '✨' },
   { id: 'umarmung', title: 'Umarmung oder Gute-Nacht-Kuss', icon: '🤍' },
+  { id: 'komplimente-sie', title: 'Komplimente-Box füllen', hint: 'Sie schreibt ein Kompliment in die Box, er liest es laut vor.', icon: '💌' },
+  { id: 'komplimente-er', title: 'Komplimente-Box füllen', hint: 'Er schreibt ein Kompliment in die Box, sie liest es laut vor.', icon: '💌' },
   { id: 'atmen', title: '3 tiefe Atemzüge', hint: '4 Sekunden ein, 6 Sekunden aus.', icon: '🌬️' },
 ];
