@@ -16,10 +16,16 @@ describe('matchesFilters', () => {
     expect(matchesFilters(card({ duration: 30 }), { ...all, durations: [null] })).toBe(true);
   });
 
-  it('Ort und Essen: eine gewählte Antwort reicht', () => {
+  it('Ort: „Beides“-Dates passen nur, wenn Indoor und Outdoor gewählt sind', () => {
     expect(matchesFilters(card({ location: 'both' }), { ...all, locations: ['indoor'] })).toBe(false);
-    expect(matchesFilters(card({ location: 'both' }), { ...all, locations: ['indoor', 'both'] })).toBe(true);
+    expect(matchesFilters(card({ location: 'both' }), { ...all, locations: ['indoor', 'outdoor'] })).toBe(true);
+    expect(matchesFilters(card({ location: 'outdoor' }), { ...all, locations: ['indoor', 'outdoor'] })).toBe(true);
+  });
+
+  it('Essen: eine gewählte Antwort reicht, „Egal“ passt immer', () => {
     expect(matchesFilters(card({ food: 'snacks' }), { ...all, foods: ['warm'] })).toBe(false);
+    expect(matchesFilters(card({ food: 'snacks' }), { ...all, foods: ['warm', 'snacks'] })).toBe(true);
+    expect(matchesFilters(card({ food: 'snacks' }), { ...all, foods: ['any'] })).toBe(true);
   });
 
   it('Karten-IDs sind eindeutig', () => {
