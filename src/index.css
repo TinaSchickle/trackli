@@ -1459,6 +1459,32 @@ textarea:focus-visible {
   justify-content: center;
 }
 
+.hub-loggedout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100dvh - 64px);
+  padding-top: 0;
+}
+
+.hub-login-btn {
+  padding: 16px 40px;
+  border-radius: 999px;
+  border: none;
+  background: var(--color-ton);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.hub-login-btn:hover,
+.hub-login-btn:active {
+  background: var(--color-ton-dark);
+  transform: translateY(-2px);
+}
+
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

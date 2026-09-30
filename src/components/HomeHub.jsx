@@ -14,6 +14,18 @@ export default function HomeHub({ user, onOpen, onAccount }) {
   const { her, him } = getCoupleNames(user);
   const names = [her, him].filter(Boolean).join(' & ');
 
+  // Ohne Anmeldung keine Kacheln zeigen (die dahinterliegenden Bereiche sind
+  // eh gesperrt) – stattdessen nur ein zentrierter Einloggen-Button.
+  if (isCloudConfigured && !user) {
+    return (
+      <div className="screen hub hub-loggedout">
+        <button type="button" className="hub-login-btn" onClick={onAccount}>
+          Einloggen
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="screen hub">
       {/* Oben rechts: Zahnrad (Konto) bzw. „Einloggen“. Der Dialog dahinter
