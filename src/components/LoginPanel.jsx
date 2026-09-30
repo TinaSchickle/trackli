@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   signIn,
   checkInviteCode,
@@ -58,13 +58,26 @@ export default function LoginPanel() {
   const [her, setHer] = useState('');
   const [him, setHim] = useState('');
   const [username, setUsername] = useState('');
-  // Solange das Paar den Benutzernamen nicht selbst angefasst hat, wird er
-  // aus den beiden Namen vorgeschlagen.
-  const [usernameEdited, setUsernameEdited] = useState(false);
+  // Zuletzt automatisch vorgeschlagener Benutzername – solange das Feld genau
+  // diesen Wert (oder nichts) enthält, darf der Vorschlag nachgeführt werden.
+  const lastSuggestion = useRef('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [resetCode, setResetCode] = useState('');
+
+  // Benutzername aus den Namen vorschlagen – erst wenn Ihr UND Sein Name
+  // eingetragen sind, und nur solange das Feld leer ist bzw. noch den letzten
+  // Vorschlag enthält (selbst Geändertes wird nie überschrieben).
+  useEffect(() => {
+    if (!her.trim() || !him.trim()) return;
+    if (username.trim() && username !== lastSuggestion.current) return;
+    const next = suggestUsername(her, him);
+    lastSuggestion.current = next;
+    setUsername(next);
+    // Nur auf Namensänderungen reagieren; username wird bewusst nur gelesen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [her, him]);
 
   function goTo(next) {
     setStep(next);
@@ -250,10 +263,7 @@ export default function LoginPanel() {
                 required
                 autoComplete="off"
                 value={her}
-                onChange={(e) => {
-                  setHer(e.target.value);
-                  if (!usernameEdited) setUsername(suggestUsername(e.target.value, him));
-                }}
+                onChange={(e) => setHer(e.target.value)}
                 style={{ ...inputStyle, marginTop: 4 }}
               />
             </label>
@@ -264,10 +274,7 @@ export default function LoginPanel() {
                 required
                 autoComplete="off"
                 value={him}
-                onChange={(e) => {
-                  setHim(e.target.value);
-                  if (!usernameEdited) setUsername(suggestUsername(her, e.target.value));
-                }}
+                onChange={(e) => setHim(e.target.value)}
                 style={{ ...inputStyle, marginTop: 4 }}
               />
             </label>
@@ -276,13 +283,14 @@ export default function LoginPanel() {
           <input
             type="text"
             required
-            autoComplete="username"
+            // Nicht als Login-Feld markieren: sonst füllen Browser/Passwort-
+            // Manager hier einen gespeicherten Namen ein und der Vorschlag
+            // aus den beiden Namen käme nie.
+            autoComplete="off"
             autoCapitalize="none"
+            name="new-couple-username"
             value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              setUsernameEdited(true);
-            }}
+            onChange={(e) => setUsername(e.target.value)}
             style={inputStyle}
           />
 
