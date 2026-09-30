@@ -2259,3 +2259,56 @@ textarea:focus-visible {
   gap: 12px;
   margin: 0;
 }
+
+/* Good Night: abhakbare Mini-Aufgaben vor dem Einschlafen */
+.gn-task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gn-check {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-line);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.gn-task--done .gn-check {
+  background: var(--color-rauchblau);
+  border-color: var(--color-rauchblau);
+}
+
+.gn-task--done .gn-title {
+  text-decoration: line-through;
+  color: var(--color-text-soft);
+}
+
+.gn-text {
+  display: grid;
+  gap: 2px;
+}
+
+.gn-hint {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.gn-progress {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--color-text-soft);
+}

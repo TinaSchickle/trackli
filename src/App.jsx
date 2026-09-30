@@ -19,7 +19,9 @@ import Nav, { TABS, visibleTabs } from './components/Nav.jsx';
 import HomeHub from './components/HomeHub.jsx';
 import { getMyTiles } from './cloud/tiles.js';
 import FunDates from './components/FunDates.jsx';
-import LiveSessions from './components/LiveSessions.jsx';
+import IdeaBoard from './components/IdeaBoard.jsx';
+import { LIVE_IDEAS } from './liveSessions/ideas.js';
+import { START_IDEAS } from './startpunkt/ideas.js';
 import Todos from './components/Todos.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
@@ -170,7 +172,7 @@ export default function App() {
       .then((tiles) => {
         if (!alive) return;
         setAllowedTiles(tiles);
-        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live', todos: 'todos' }[view];
+        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy', live: 'live', start: 'start', todos: 'todos' }[view];
         if (viewTile && tiles !== null && !tiles.includes(viewTile)) setView('home');
       })
       .catch(() => alive && setAllowedTiles([]));
@@ -268,10 +270,15 @@ export default function App() {
     );
   }
 
-  if (view === 'live') {
+  if (view === 'live' || view === 'start') {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
-        <LiveSessions onHome={() => setView('home')} />
+        <IdeaBoard
+          key={view}
+          title={view === 'live' ? 'Live Sessions' : 'Startpunkt'}
+          ideas={view === 'live' ? LIVE_IDEAS : START_IDEAS}
+          onHome={() => setView('home')}
+        />
         {accountModal}
       </div>
     );

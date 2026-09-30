@@ -6,6 +6,7 @@
 // neue Konten bekommen nur DEFAULT_TILES.
 export const HUB_TILES = [
   { key: 'questionnaire', title: 'Fragebogen', subtitle: 'Hier fängt alles an', icon: '📝', active: false },
+  { key: 'start', title: 'Startpunkt', subtitle: 'Ideensammlung', icon: '🧭', active: true },
   { key: 'trackli', title: 'Trackli', subtitle: 'Zykluskalender nach Sensiplan', icon: '🌙', active: true },
   { key: 'dates', title: 'Spaß-Dates', subtitle: 'Ideen für gemeinsame Zeit', icon: '🎈', active: true },
   { key: 'sexy', title: 'Sexy Time', subtitle: 'Nur für euch zwei', icon: '🔥', active: true },
