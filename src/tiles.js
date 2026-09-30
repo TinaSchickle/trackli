@@ -12,6 +12,7 @@ export const HUB_TILES = [
   { key: 'sexy', title: 'Sexy Time', subtitle: 'Nur für euch zwei', icon: '🔥', active: true },
   { key: 'live', title: 'Live Sessions', subtitle: 'Ideensammlung', icon: '🎙️', active: true },
   { key: 'lifestyle', title: 'Lebensstil', subtitle: 'Kleine Rituale für jeden Tag', icon: '🌿', active: false },
+  { key: 'goodnight', title: 'Good Night', subtitle: '5 Minuten vor dem Einschlafen', icon: '😴', active: true },
   { key: 'todos', title: 'TODOs', subtitle: 'Was noch ansteht', icon: '✅', active: true },
 ];
 
