@@ -34,4 +34,16 @@ export const LIVE_IDEAS = [
       'Dahinter eine eigene geführte Meditation',
     ],
   },
+  {
+    id: 'frust-breathwork',
+    title: 'Frust Breathwork Session',
+    icon: '🎈',
+    notes: [
+      'Luftballon füllen und platzen lassen',
+      'Thema: Frust, Druck, Angst, dass es wieder nicht klappt …',
+      'In einen Luftballon reinatmen: Ein puddingartiger, schleimiger Strang verlässt das Gehirn und fließt in den Luftballon zwischen den Händen.',
+      'Unter der Hand tut sich die Erde auf – wie beim Buddeln im Sand-/Erdkasten, es geht ganz weit runter …',
+      'Der Luftballon platzt, die Dreckbrühe fließt da hinunter. Zubuddeln, Blumen drüber, ein Affirmations-Fähnchen obendrauf.',
+    ],
+  },
 ];
