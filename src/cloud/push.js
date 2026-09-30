@@ -150,3 +150,34 @@ export async function setReminderTime(hour, minute) {
   );
   if (error) throw error;
 }
+
+// ── Good-Night-Erinnerung ───────────────────────────────────────────────────
+// Eigene Uhrzeit (Spalten good_night_hour/-minute in notification_settings),
+// immer aktiv. Der Cron schickt sie nur, wenn die Kachel freigeschaltet ist
+// und für den Abend noch keine Aufgabe gezogen wurde.
+export const DEFAULT_GOOD_NIGHT_TIME = { hour: 21, minute: 0 };
+
+export async function getGoodNightTime() {
+  if (!isCloudConfigured) return DEFAULT_GOOD_NIGHT_TIME;
+  const user = await getUser();
+  if (!user) return DEFAULT_GOOD_NIGHT_TIME;
+  const { data, error } = await supabase
+    .from('notification_settings')
+    .select('good_night_hour, good_night_minute')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.good_night_hour == null) return DEFAULT_GOOD_NIGHT_TIME;
+  return { hour: data.good_night_hour, minute: data.good_night_minute ?? 0 };
+}
+
+export async function setGoodNightTime(hour, minute) {
+  if (!isCloudConfigured) return;
+  const user = await getUser();
+  if (!user) throw new Error('Nicht angemeldet.');
+  const { error } = await supabase.from('notification_settings').upsert(
+    { user_id: user.id, good_night_hour: hour, good_night_minute: minute, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
+  if (error) throw error;
+}

@@ -184,3 +184,80 @@ for (const [userId, subs] of byUser) {
     console.log(`${userId}: heute nichts offen – keine Erinnerung.`);
   }
 }
+
+// ── Good-Night-Erinnerung ───────────────────────────────────────────────────
+// Eigene Uhrzeit pro Konto (notification_settings.good_night_hour/-minute,
+// Default 21:00), immer aktiv. Nur für Konten mit freigeschalteter Kachel
+// „goodnight“ (Admin sieht alle Kacheln) und nur, wenn für den Abend noch
+// keine Aufgabe gezogen wurde. Läuft getrennt vom Zyklus-Teil oben: ein
+// Fehler hier (z. B. fehlende Spalten) soll die Zyklus-Erinnerung nicht stören.
+const GOOD_NIGHT_DEFAULT = { hour: 21, minute: 0 };
+const GOOD_NIGHT_MESSAGE = { title: 'Good Night', body: 'Euer Gute-Nacht-Moment wartet 🌙', tag: 'good-night', url: './?open=goodnight' };
+// Wie public.is_admin() in supabase-setup.sql.
+const ADMIN_EMAILS = ['tina.schickle@gmx.de'];
+
+// Ein „Abend“ reicht bis 5 Uhr früh (wie in der App): eine Erinnerung um
+// 0:30 gehört noch zum Vortag.
+function eveningDate() {
+  if (hour >= 5) return isoDate;
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+async function hasGoodNightTile(userId, tilesByUser) {
+  if (tilesByUser.get(userId)?.includes('goodnight')) return true;
+  const { data } = await supabase.auth.admin.getUserById(userId);
+  return ADMIN_EMAILS.includes(data?.user?.email?.toLowerCase());
+}
+
+async function sendGoodNight(userId, subs) {
+  for (const sub of subs) {
+    const subscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify(GOOD_NIGHT_MESSAGE));
+      console.log(`Good-Night-Push an ${userId} (${sub.endpoint.slice(0, 40)}…)`);
+    } catch (err) {
+      const status = err?.statusCode;
+      if (status === 404 || status === 410) {
+        await supabase.from('push_subscriptions').delete().eq('user_id', userId).eq('endpoint', sub.endpoint);
+      } else {
+        console.error(`Good-Night-Fehler bei ${userId}:`, err?.message || err);
+      }
+    }
+  }
+}
+
+try {
+  const evening = eveningDate();
+  const [{ data: gnSettings, error: gnErr }, { data: tiles, error: tilesErr }, { data: draws, error: drawsErr }] =
+    await Promise.all([
+      withRetry(() => supabase.from('notification_settings').select('user_id, good_night_hour, good_night_minute')),
+      withRetry(() => supabase.from('tile_access').select('user_id, tiles')),
+      withRetry(() => supabase.from('good_night_draws').select('user_id').eq('evening', evening)),
+    ]);
+  if (gnErr) throw gnErr;
+  if (tilesErr) throw tilesErr;
+  if (drawsErr) throw drawsErr;
+
+  const gnTimeByUser = new Map(
+    (gnSettings ?? [])
+      .filter((s) => s.good_night_hour != null)
+      .map((s) => [s.user_id, { hour: s.good_night_hour, minute: s.good_night_minute ?? 0 }])
+  );
+  const tilesByUser = new Map((tiles ?? []).map((t) => [t.user_id, t.tiles ?? []]));
+  const drawnTonight = new Set((draws ?? []).map((d) => d.user_id));
+
+  for (const [userId, subs] of byUser) {
+    const wanted = gnTimeByUser.get(userId) ?? GOOD_NIGHT_DEFAULT;
+    if (!FORCE_RUN && (hour !== wanted.hour || minute !== wanted.minute)) continue;
+    if (!(await hasGoodNightTile(userId, tilesByUser))) continue;
+    if (drawnTonight.has(userId)) {
+      console.log(`${userId}: Good-Night-Aufgabe für ${evening} schon gezogen – keine Erinnerung.`);
+      continue;
+    }
+    await sendGoodNight(userId, subs);
+  }
+} catch (err) {
+  console.error('Good-Night-Erinnerung übersprungen:', err?.message || err);
+}

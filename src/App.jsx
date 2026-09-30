@@ -34,7 +34,11 @@ export default function App() {
   const [entries, setEntries] = useState([]);
   const [loaded, setLoaded] = useState(false);
   // Startseite mit Kacheln ('home') oder ein geöffneter Bereich ('trackli', 'dates').
-  const [view, setView] = useState('home');
+  // ?open=goodnight (Klick auf die Good-Night-Erinnerung) öffnet die Kachel
+  // direkt; ist sie nicht freigeschaltet, geht es unten zurück zur Startseite.
+  const [view, setView] = useState(() =>
+    new URLSearchParams(window.location.search).get('open') === 'goodnight' ? 'goodnight' : 'home'
+  );
   // Kacheln, die dieses Konto sehen darf (null = alle, undefined = lädt).
   const [allowedTiles, setAllowedTiles] = useState(undefined);
   const [tab, setTab] = useState('entry');
@@ -167,6 +171,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Den ?open-Parameter nach dem Start aus der Adresszeile entfernen, damit
+  // ein Neuladen wieder auf der Startseite landet.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('open')) {
+      url.searchParams.delete('open');
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
+
   // Freigeschaltete Kacheln bei jedem Kontowechsel neu laden. Ein Bereich,
   // der nicht (mehr) freigeschaltet ist, wird auch direkt verlassen.
   useEffect(() => {
@@ -247,6 +261,7 @@ export default function App() {
       lastSyncAt={lastSyncAt}
       syncError={syncError}
       recovery={recovery}
+      showGoodNight={allowedTiles === null || !!allowedTiles?.includes('goodnight')}
       onRecoveryDone={() => setRecovery(false)}
       onClose={() => {
         setShowAccount(false);

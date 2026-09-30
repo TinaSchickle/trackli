@@ -595,3 +595,21 @@ create policy "good night ist privat"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.good_night_draws to authenticated;
+
+-- Good-Night-Erinnerung: eigene Uhrzeit pro Konto (Default 21:00, immer
+-- aktiv, Halbstundenschritte). Der Cron liest dafür auch Kacheln und Ziehungen.
+alter table public.notification_settings
+  add column if not exists good_night_hour smallint not null default 21;
+alter table public.notification_settings
+  add column if not exists good_night_minute smallint not null default 0;
+alter table public.notification_settings
+  drop constraint if exists notification_settings_good_night_hour_check;
+alter table public.notification_settings
+  add constraint notification_settings_good_night_hour_check check (good_night_hour between 0 and 23);
+alter table public.notification_settings
+  drop constraint if exists notification_settings_good_night_minute_check;
+alter table public.notification_settings
+  add constraint notification_settings_good_night_minute_check check (good_night_minute in (0, 30));
+
+grant select on public.tile_access to service_role;
+grant select on public.good_night_draws to service_role;

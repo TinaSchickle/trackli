@@ -14,6 +14,9 @@ import {
   getReminderTime,
   DEFAULT_REMINDER_TIME,
   setReminderTime,
+  getGoodNightTime,
+  setGoodNightTime,
+  DEFAULT_GOOD_NIGHT_TIME,
 } from '../cloud/push.js';
 import InfoToggle from './InfoToggle.jsx';
 import LoginPanel from './LoginPanel.jsx';
@@ -26,6 +29,80 @@ const REMINDER_SLOTS = Array.from({ length: 48 }, (_, i) => ({
   hour: Math.floor(i / 2),
   minute: i % 2 === 0 ? 0 : 30,
 }));
+
+const fmtTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+// Uhrzeit der Good-Night-Erinnerung (immer aktiv, nur die Zeit ist wählbar).
+// Wie oben: erst „Übernehmen“ speichert, damit das Auswahlrad nicht
+// zwischendurch speichert.
+function GoodNightTimeSetting() {
+  const [draft, setDraft] = useState(DEFAULT_GOOD_NIGHT_TIME);
+  const [saved, setSaved] = useState(DEFAULT_GOOD_NIGHT_TIME);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    getGoodNightTime()
+      .then((t) => {
+        setDraft(t);
+        setSaved(t);
+      })
+      .catch((err) => setError(humanError(err)));
+  }, []);
+
+  async function apply() {
+    setError(null);
+    setSaving(true);
+    try {
+      await setGoodNightTime(draft.hour, draft.minute);
+      setSaved(draft);
+    } catch (err) {
+      setError(humanError(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const changed = draft.hour !== saved.hour || draft.minute !== saved.minute;
+  return (
+    <div style={{ marginBottom: 12, fontSize: '0.9rem' }}>
+      <label>
+        Good Night: Erinnerung um{' '}
+        <select
+          value={`${draft.hour}:${draft.minute}`}
+          onChange={(e) => {
+            const [hour, minute] = e.target.value.split(':').map(Number);
+            setDraft({ hour, minute });
+          }}
+          style={{ fontSize: '0.9rem' }}
+        >
+          {REMINDER_SLOTS.map(({ hour, minute }) => (
+            <option key={`${hour}:${minute}`} value={`${hour}:${minute}`}>
+              {fmtTime(hour, minute)}
+            </option>
+          ))}
+        </select>{' '}
+        Uhr
+      </label>
+      {changed && (
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={apply}
+          disabled={saving}
+          style={{ marginLeft: 8, fontSize: '0.8rem', padding: '2px 8px' }}
+        >
+          {saving ? 'Speichert…' : 'Übernehmen'}
+        </button>
+      )}
+      {error && (
+        <p style={{ color: 'var(--color-danger, #b3261e)', fontSize: '0.85rem', marginTop: 6, marginBottom: 0 }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -53,6 +130,7 @@ export default function AccountModal({
   recovery,
   onRecoveryDone,
   onClose,
+  showGoodNight = false,
 }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -256,6 +334,7 @@ export default function AccountModal({
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <InfoToggle text={REMINDER_MODULES_INFO} />
                 </div>
+                {showGoodNight && <GoodNightTimeSetting />}
                 {needsPermission && (
                   <button
                     type="button"

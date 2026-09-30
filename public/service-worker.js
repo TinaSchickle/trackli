@@ -65,7 +65,8 @@ self.addEventListener('fetch', (event) => {
 
 // Erinnerungs-Push (z. B. "heute fehlen noch: Temperatur, Zervixschleim"),
 // ausgelöst vom Cron-Job in scripts/send-daily-reminders.mjs. Payload ist
-// JSON {title, body}.
+// JSON {title, body, tag?, url?} – tag trennt Zyklus- und Good-Night-
+// Erinnerung, url ist das Ziel beim Antippen (z. B. './?open=goodnight').
 self.addEventListener('push', (event) => {
   let payload = { title: 'Zykluskalender', body: 'Denk an deinen heutigen Eintrag.' };
   try {
@@ -78,21 +79,28 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',
-      tag: 'daily-reminder',
+      tag: payload.tag || 'daily-reminder',
+      data: { url: payload.url || './' },
     })
   );
 });
 
-// Klick auf die Benachrichtigung: vorhandenes Fenster fokussieren oder die
-// App neu öffnen.
+// Klick auf die Benachrichtigung: vorhandenes Fenster fokussieren (und bei
+// eigener Ziel-URL dorthin wechseln) oder die App neu öffnen.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const url = event.notification.data?.url || './';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {
+          if (url !== './' && 'navigate' in client) {
+            return client.navigate(url).then((c) => (c || client).focus());
+          }
+          return client.focus();
+        }
       }
-      if (self.clients.openWindow) return self.clients.openWindow('./');
+      if (self.clients.openWindow) return self.clients.openWindow(url);
       return undefined;
     })
   );
