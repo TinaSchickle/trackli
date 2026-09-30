@@ -2065,3 +2065,51 @@ textarea:focus-visible {
   padding: 1px 5px;
   border-radius: 4px;
 }
+
+/* „Warum?“ bei der Passwort-Aufgabe: klappt als Sprechblase im Kasten auf */
+.login-why {
+  margin-top: 8px;
+}
+
+.login-why summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-rauchblau-dark);
+}
+
+.login-why summary::-webkit-details-marker { display: none; }
+
+.login-why summary::before {
+  content: '💭';
+}
+
+.login-why p {
+  position: relative;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  font-style: italic;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Kleiner Pfeil der Sprechblase nach oben zum „Warum?“ */
+.login-why p::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-line);
+  transform: rotate(45deg);
+}

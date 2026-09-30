@@ -202,6 +202,13 @@ export default function LoginPanel() {
               Beispiel: <em>„Unsere Liebe gewinnt immer“</em> kann zum Beispiel zu{' '}
               <code>ULgI888!&lt;3</code> werden.
             </p>
+            <details className="login-why">
+              <summary>Warum?</summary>
+              <p>
+                Bei jedem Einloggen sagt ihr euch euren Leitsatz im Kopf vor. Was man oft
+                wiederholt, fängt man an zu glauben – so wird er Stück für Stück Teil von euch.
+              </p>
+            </details>
           </div>
 
           <label style={labelStyle}>Passwort</label>
