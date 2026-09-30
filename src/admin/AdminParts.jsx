@@ -47,8 +47,8 @@ export function InviteCodes() {
     }
   }
 
+  // Eingelöste Codes stehen beim Konto, das damit angelegt wurde (Übersicht).
   const open = (codes ?? []).filter((c) => !c.used_at);
-  const used = (codes ?? []).filter((c) => c.used_at);
 
   return (
     <section style={{ marginBottom: 24 }}>
@@ -95,11 +95,7 @@ export function InviteCodes() {
           </span>
         </div>
       ))}
-      {used.length > 0 && (
-        <p style={softText}>
-          Verbraucht: {used.map((c) => `${c.code} (${new Date(c.used_at).toLocaleDateString('de-DE')})`).join(', ')}
-        </p>
-      )}
+      {codes && open.length === 0 && <p style={softText}>Keine offenen Codes.</p>}
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isCloudConfigured } from '../cloud/supabase.js';
 import { getUser, onAuthChange, isAdmin, signIn, signOut, displayLogin } from '../cloud/auth.js';
-import { adminOverview, adminSetTiles } from './api.js';
+import { adminOverview, adminSetTiles, listInviteCodes } from './api.js';
 import { HUB_TILES } from '../tiles.js';
 import { CARDS } from '../funDates/cards.js';
 import { InviteCodes, ResetPassword, softText } from './AdminParts.jsx';
@@ -143,7 +143,8 @@ function TileMatrix({ rows, onTilesChange }) {
   );
 }
 
-function CoupleCard({ row }) {
+// inviteCode: der Zugangscode, mit dem dieses Konto angelegt wurde (oder null).
+function CoupleCard({ row, inviteCode }) {
   const names = [row.her_name, row.his_name].filter(Boolean).join(' & ');
   const admin = isAdmin({ email: row.email });
   return (
@@ -165,6 +166,15 @@ function CoupleCard({ row }) {
             <dt>Zuletzt angemeldet</dt>
             <dd>{formatDate(row.last_sign_in_at, true)}</dd>
           </div>
+          {inviteCode && (
+            <div>
+              <dt>Zugangscode</dt>
+              <dd>
+                <strong style={{ letterSpacing: '0.08em' }}>{inviteCode.code}</strong>
+                <span style={softText}> · eingelöst {formatDate(inviteCode.used_at)}</span>
+              </dd>
+            </div>
+          )}
         </dl>
       </header>
 
@@ -186,12 +196,17 @@ function CoupleCard({ row }) {
 
 function Overview() {
   const [rows, setRows] = useState(null);
+  const [codeByUser, setCodeByUser] = useState({});
   const [error, setError] = useState(null);
 
   function reload() {
     setError(null);
-    adminOverview()
-      .then(setRows)
+    // Codes dazuladen, um jedem Konto seinen eingelösten Code zuzuordnen.
+    Promise.all([adminOverview(), listInviteCodes().catch(() => [])])
+      .then(([overview, codes]) => {
+        setCodeByUser(Object.fromEntries(codes.filter((c) => c.used_by).map((c) => [c.used_by, c])));
+        setRows(overview);
+      })
       .catch((e) => {
         const m = e?.message || String(e);
         setError(
@@ -232,7 +247,7 @@ function Overview() {
       <p style={softText}>Ohne Zyklusdaten und ohne Selfies – die bleiben privat beim Paar.</p>
       <div className="adm-grid">
         {rows.map((r) => (
-          <CoupleCard key={r.user_id} row={r} />
+          <CoupleCard key={r.user_id} row={r} inviteCode={codeByUser[r.user_id] ?? null} />
         ))}
       </div>
     </>
