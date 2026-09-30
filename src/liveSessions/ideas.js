@@ -24,4 +24,14 @@ export const LIVE_IDEAS = [
     icon: '🌙',
     notes: ['Format: Gruppencall'],
   },
+  {
+    id: 'tre-session',
+    title: 'TRE Session',
+    icon: '🫨',
+    notes: [
+      'Zittern auslösen: Beine zusammen – oder auf andere Weise auslösen?',
+      'In Kombination mit Breathwork und kraftvoller Musik',
+      'Dahinter eine eigene geführte Meditation',
+    ],
+  },
 ];
