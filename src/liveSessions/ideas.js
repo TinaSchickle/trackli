@@ -48,4 +48,15 @@ export const LIVE_IDEAS = [
       'Der Luftballon platzt, die Dreckbrühe fließt da hinunter. Zubuddeln, Blumen drüber, ein Affirmations-Fähnchen obendrauf.',
     ],
   },
+  {
+    id: 'vor-gericht',
+    title: 'Schreibübung: Vor Gericht',
+    icon: '⚖️',
+    notes: [
+      'Format: Gruppencall oder Einzelcall (noch offen)',
+      'Stell dir vor, du bist in einer Gerichtsverhandlung. Du musst dich rechtfertigen, warum du … („diesen Mann liebst“, „das Baby verdient hast“ …)',
+      'Vielleicht sogar als „triggernde Meditation“: laut aussprechen, warum man es verdient hat – und danach spüren, welche Emotionen gerade da sind und woher der Gegenwind kommt.',
+      'Oder diese Emotionen werden zu einem Teufelchen-Charakter, der auf der Gegenseite sitzt.',
+    ],
+  },
 ];
