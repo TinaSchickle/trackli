@@ -140,10 +140,14 @@ grant select, insert, update, delete on public.push_subscriptions to authenticat
 -- Halbstundenschritte: reminder_minute ist entweder 0 oder 30.
 create table if not exists public.notification_settings (
   user_id         uuid    primary key references auth.users (id) on delete cascade,
-  reminder_hour   smallint not null default 20 check (reminder_hour between 0 and 23),
+  reminder_hour   smallint not null default 8 check (reminder_hour between 0 and 23),
   reminder_minute smallint not null default 0 check (reminder_minute in (0, 30)),
   updated_at      timestamptz not null default now()
 );
+
+-- Default-Uhrzeit war früher 20 Uhr; bestehende Tabellen auf 8 Uhr umstellen.
+alter table public.notification_settings
+  alter column reminder_hour set default 8;
 
 -- Für bereits bestehende Zeilen aus einer früheren Version des Schemas.
 alter table public.notification_settings
