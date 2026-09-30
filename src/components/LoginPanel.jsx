@@ -9,6 +9,7 @@ import {
   suggestUsername,
   USERNAME_PATTERN,
 } from '../cloud/auth.js';
+import SecretInput from './SecretInput.jsx';
 
 // Übersetzt die häufigsten Supabase-Auth-Fehler ins Deutsche.
 function humanError(err) {
@@ -187,21 +188,19 @@ export default function LoginPanel() {
         </p>
         <form onSubmit={handleResetPassword}>
           <label style={labelStyle}>Neues Passwort</label>
-          <input
-            type={showPassword ? 'text' : 'password'}
+          <SecretInput
+            show={showPassword}
             required
             minLength={6}
-            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
           />
           <label style={labelStyle}>Neues Passwort wiederholen</label>
-          <input
-            type={showPassword ? 'text' : 'password'}
+          <SecretInput
+            show={showPassword}
             required
             minLength={6}
-            autoComplete="new-password"
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
             style={{ ...inputStyle, marginBottom: 8 }}
@@ -314,21 +313,19 @@ export default function LoginPanel() {
           </div>
 
           <label style={labelStyle}>Passwort</label>
-          <input
-            type={showPassword ? 'text' : 'password'}
+          <SecretInput
+            show={showPassword}
             required
             minLength={6}
-            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
           />
           <label style={labelStyle}>Passwort wiederholen</label>
-          <input
-            type={showPassword ? 'text' : 'password'}
+          <SecretInput
+            show={showPassword}
             required
             minLength={6}
-            autoComplete="new-password"
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
             style={{ ...inputStyle, marginBottom: 8 }}
@@ -356,17 +353,15 @@ export default function LoginPanel() {
         <input
           type="text"
           required
-          autoComplete="username"
+          autoComplete="off"
           autoCapitalize="none"
           value={login}
           onChange={(e) => setLogin(e.target.value)}
           style={inputStyle}
         />
         <label style={labelStyle}>Passwort</label>
-        <input
-          type="password"
+        <SecretInput
           required
-          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ ...inputStyle, marginBottom: 14 }}
