@@ -7,10 +7,42 @@ import {
   optionFor,
   matchesFilters,
 } from '../funDates/cards.js';
+import { SEXY_CARDS } from '../sexyTime/cards.js';
 import { getDoneCards, markCardDone, unmarkCardDone, compressImage } from '../cloud/funDates.js';
 
-// Lachende Gesichter für die verdeckten Karten, bis echte Bilder kommen.
-const FACES = ['😄', '😂', '🤣', '😆', '😁', '😹', '😃', '😸'];
+// Die Pinnwand gibt es zweimal: Spaß-Dates (mit Quiz + Erinnerungs-Selfie)
+// und Sexy Time (alle Karten ohne Filter, abhaken ohne Foto).
+const VARIANTS = {
+  dates: {
+    eyebrow: 'Zeit zu zweit',
+    title: 'Spaß-Dates',
+    cards: CARDS,
+    withQuiz: true,
+    withSelfie: true,
+    // Lachende Gesichter für die verdeckten Karten, bis echte Bilder kommen.
+    faces: ['😄', '😂', '🤣', '😆', '😁', '😹', '😃', '😸'],
+    banner: 'May the Fun begin',
+    notes: [
+      { text: 'Neues Abenteuer!', color: '#fff27a', pin: 'red' },
+      { text: 'Nur wir zwei ♥', color: '#ffc4d6', pin: 'blue' },
+    ],
+    againLabel: "Let's have fun 🎉",
+  },
+  sexy: {
+    eyebrow: 'Nur für euch zwei',
+    title: 'Sexy Time',
+    cards: SEXY_CARDS,
+    withQuiz: false,
+    withSelfie: false,
+    faces: ['😘', '😏', '🔥', '💋', '🥰', '😍'],
+    banner: "Let's get closer",
+    notes: [
+      { text: 'Heute Nacht?', color: '#ffc4d6', pin: 'red' },
+      { text: 'Nur wir zwei ♥', color: '#ff9fb0', pin: 'brass' },
+    ],
+    againLabel: 'Neu mischen 🔥',
+  },
+};
 
 const QUESTIONS = [
   { key: 'locations', title: 'Worauf habt ihr heute Lust?', options: LOCATION_OPTIONS },
@@ -46,17 +78,9 @@ function shuffle(list) {
 
 const rand = (min, max) => min + Math.random() * (max - min);
 
-function faceFor(cardId) {
-  const idx = CARDS.findIndex((c) => c.id === cardId);
-  return FACES[idx % FACES.length];
-}
-
-function photoBgFor(cardId) {
-  const idx = CARDS.findIndex((c) => c.id === cardId);
-  return PHOTO_BGS[idx % PHOTO_BGS.length];
-}
-
 function CardIcons({ card }) {
+  // Sexy-Time-Karten haben keine Filter-Infos.
+  if (!card.location) return null;
   const loc = optionFor(LOCATION_OPTIONS, card.location);
   const dur = optionFor(DURATION_OPTIONS, card.duration);
   const food = optionFor(FOOD_OPTIONS, card.food);
@@ -239,8 +263,44 @@ function SelfieModal({ alreadyDone, onSave, onClose }) {
   );
 }
 
-function DateDetail({ card, done, selfie, busy, onDone, onUndo, onBack }) {
+function DateDetail({ card, done, selfie, withSelfie, busy, onDone, onUndo, onBack }) {
   const media = card.media ?? [];
+  const steps = card.steps ?? [];
+  // Erst nur „Das braucht ihr“ zeigen; der Rest kommt nach „Wir sind bereit“.
+  const [ready, setReady] = useState(false);
+
+  const materials = (
+    <section className="card fd-section">
+      <h3>Das braucht ihr</h3>
+      <ul>
+        {card.materials.map((m) => (
+          <li key={m}>{m}</li>
+        ))}
+      </ul>
+    </section>
+  );
+
+  if (!ready) {
+    return (
+      <div className="screen fd-detail">
+        <button type="button" className="fd-back" onClick={onBack}>← Zurück</button>
+        <h1 className="fd-detail-title">{card.title}</h1>
+        <CardIcons card={card} />
+        {materials}
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => {
+            setReady(true);
+            window.scrollTo(0, 0);
+          }}
+        >
+          Wir sind bereit ✨
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="screen fd-detail">
       <button type="button" className="fd-back" onClick={onBack}>← Zurück</button>
@@ -267,47 +327,48 @@ function DateDetail({ card, done, selfie, busy, onDone, onUndo, onBack }) {
         )
       )}
 
-      <section className="card fd-section">
-        <h3>Das braucht ihr</h3>
-        <ul>
-          {card.materials.map((m) => (
-            <li key={m}>{m}</li>
-          ))}
-        </ul>
-      </section>
+      {materials}
 
       <section className="card fd-section">
         <h3>So geht's</h3>
-        <ol className="fd-steps">
-          {card.steps.map((s, i) => (
-            <li key={i} className={s.soon ? 'is-soon' : ''}>
-              {s.text}
-              {s.note && <span className="fd-badge">{s.note}</span>}
-              {s.soon && <span className="fd-badge">Kommt bald</span>}
-            </li>
-          ))}
-        </ol>
+        {steps.length === 0 ? (
+          <p className="fd-intro" style={{ margin: 0 }}>Die Anleitung kommt bald.</p>
+        ) : (
+          <ol className="fd-steps">
+            {steps.map((s, i) => (
+              <li key={i} className={s.soon ? 'is-soon' : ''}>
+                {s.text}
+                {s.note && <span className="fd-badge">{s.note}</span>}
+                {s.soon && <span className="fd-badge">Kommt bald</span>}
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       {done ? (
         <>
-          <button type="button" className="btn-primary" disabled={busy} onClick={onDone} style={{ marginBottom: 10 }}>
-            📸 {selfie ? 'Selfie ändern' : 'Selfie hinzufügen'}
-          </button>
+          {withSelfie && (
+            <button type="button" className="btn-primary" disabled={busy} onClick={onDone} style={{ marginBottom: 10 }}>
+              📸 {selfie ? 'Selfie ändern' : 'Selfie hinzufügen'}
+            </button>
+          )}
           <button type="button" className="btn-secondary" disabled={busy} onClick={onUndo} style={{ width: '100%' }}>
             Wieder verdecken
           </button>
         </>
       ) : (
         <button type="button" className="btn-primary" disabled={busy} onClick={onDone}>
-          ✓ Erinnerungs-Selfie
+          {withSelfie ? '✓ Erinnerungs-Selfie' : '✓ Gemacht'}
         </button>
       )}
     </div>
   );
 }
 
-export default function FunDates({ user, onHome }) {
+export default function FunDates({ user, onHome, variant = 'dates' }) {
+  const v = VARIANTS[variant];
+  const cards = v.cards;
   // { [cardId]: selfieUrl | null } – alle erledigten Karten.
   const [doneMap, setDoneMap] = useState({});
   const [selfieOpen, setSelfieOpen] = useState(false);
@@ -329,11 +390,17 @@ export default function FunDates({ user, onHome }) {
       .catch(() => setLoadError('Erledigte Dates konnten nicht geladen werden.'));
   }, [user]);
 
-  const openCard = useMemo(() => CARDS.find((c) => c.id === openId), [openId]);
+  const openCard = useMemo(() => cards.find((c) => c.id === openId), [cards, openId]);
+
+  // Ohne Quiz (Sexy Time) werden einfach alle Karten gemischt und verteilt.
+  function handleStart() {
+    if (v.withQuiz) setQuizOpen(true);
+    else handleGo(null);
+  }
 
   function handleGo(filters) {
     setQuizOpen(false);
-    const matched = shuffle(CARDS.filter((c) => matchesFilters(c, filters)));
+    const matched = shuffle(filters ? cards.filter((c) => matchesFilters(c, filters)) : cards);
     setDeck(
       matched.map((c) => ({
         id: c.id,
@@ -372,8 +439,21 @@ export default function FunDates({ user, onHome }) {
     setSelfieOpen(false);
   }
 
+  // Ohne Selfie-Funktion: direkt abhaken.
+  async function handleMarkDone() {
+    setBusy(true);
+    try {
+      await handleSaveSelfie(null);
+    } catch {
+      setLoadError('Speichern hat nicht geklappt. Bitte später nochmal versuchen.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleUndo() {
-    if (!window.confirm('Karte wieder verdecken? Ein Selfie dazu wird gelöscht.')) return;
+    const msg = v.withSelfie ? 'Karte wieder verdecken? Ein Selfie dazu wird gelöscht.' : 'Karte wieder verdecken?';
+    if (!window.confirm(msg)) return;
     setBusy(true);
     try {
       await unmarkCardDone(user, openId);
@@ -396,8 +476,9 @@ export default function FunDates({ user, onHome }) {
           card={openCard}
           done={openCard.id in doneMap}
           selfie={doneMap[openCard.id]}
+          withSelfie={v.withSelfie}
           busy={busy}
-          onDone={() => setSelfieOpen(true)}
+          onDone={v.withSelfie ? () => setSelfieOpen(true) : handleMarkDone}
           onUndo={handleUndo}
           onBack={() => setConfirmBack(true)}
         />
@@ -436,15 +517,15 @@ export default function FunDates({ user, onHome }) {
     <div className="screen fd">
       <button type="button" className="fd-back" onClick={onHome}>← Übersicht</button>
       <div className="app-header" style={{ padding: '4px 0 12px' }}>
-        <div className="eyebrow">Zeit zu zweit</div>
-        <h1 style={{ fontSize: '1.4rem' }}>Spaß-Dates</h1>
+        <div className="eyebrow">{v.eyebrow}</div>
+        <h1 style={{ fontSize: '1.4rem' }}>{v.title}</h1>
       </div>
 
-      <Legend />
+      {v.withQuiz && <Legend />}
 
       {deck && (
-        <button type="button" className="btn-primary fd-go" onClick={() => setQuizOpen(true)}>
-          Let's have fun 🎉
+        <button type="button" className="btn-primary fd-go" onClick={handleStart}>
+          {v.againLabel}
         </button>
       )}
 
@@ -452,17 +533,17 @@ export default function FunDates({ user, onHome }) {
       <div className="fd-board">
         {!deck && (
           <div className="fd-board-empty">
-            <span className="fd-sticky is-deco is-start" style={{ '--note': '#fff27a', '--rot': '-8deg' }}>
-              <span className="fd-sticky-pin is-red" />Neues Abenteuer!
+            <span className="fd-sticky is-deco is-start" style={{ '--note': v.notes[0].color, '--rot': '-8deg' }}>
+              <span className={`fd-sticky-pin is-${v.notes[0].pin}`} />{v.notes[0].text}
             </span>
-            <button type="button" className="fd-banner" onClick={() => setQuizOpen(true)}>
+            <button type="button" className="fd-banner" onClick={handleStart}>
               <span className="fd-tape is-left" />
-              May the Fun begin
+              {v.banner}
               <span className="fd-banner-hint">hier klicken 👆</span>
               <span className="fd-tape is-right" />
             </button>
-            <span className="fd-sticky is-deco is-end" style={{ '--note': '#ffc4d6', '--rot': '6deg' }}>
-              <span className="fd-sticky-pin is-blue" />Nur wir zwei ♥
+            <span className="fd-sticky is-deco is-end" style={{ '--note': v.notes[1].color, '--rot': '6deg' }}>
+              <span className={`fd-sticky-pin is-${v.notes[1].pin}`} />{v.notes[1].text}
             </span>
           </div>
         )}
@@ -471,7 +552,7 @@ export default function FunDates({ user, onHome }) {
           <div className="fd-stack" aria-label="Karten werden gemischt">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="fd-stack-card" style={{ animationDelay: `${i * 60}ms` }}>
-                <span>{FACES[i]}</span>
+                <span>{v.faces[i % v.faces.length]}</span>
               </div>
             ))}
           </div>
@@ -488,7 +569,8 @@ export default function FunDates({ user, onHome }) {
         {deck && !shuffling && deck.length > 0 && (
           <div className="fd-grid" key={dealKey}>
             {deck.map((d, i) => {
-              const card = CARDS.find((c) => c.id === d.id);
+              const card = cards.find((c) => c.id === d.id);
+              const idx = cards.indexOf(card);
               const done = d.id in doneMap;
               const photo = doneMap[d.id] || card.cover;
               const flipped = done || flippingId === d.id;
@@ -510,8 +592,8 @@ export default function FunDates({ user, onHome }) {
                   <span className={`fd-pin is-${d.pin}`} style={{ left: `${d.pinX}%` }} aria-hidden="true" />
                   <span className="fd-card-inner">
                     <span className="fd-face fd-back-face">
-                      <span className="fd-photo" style={{ background: photoBgFor(d.id) }}>
-                        <span className="fd-emoji" aria-hidden="true">{faceFor(d.id)}</span>
+                      <span className="fd-photo" style={{ background: PHOTO_BGS[idx % PHOTO_BGS.length] }}>
+                        <span className="fd-emoji" aria-hidden="true">{v.faces[idx % v.faces.length]}</span>
                       </span>
                       <span className="fd-caption"><CardIcons card={card} /></span>
                     </span>

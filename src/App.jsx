@@ -168,7 +168,7 @@ export default function App() {
       .then((tiles) => {
         if (!alive) return;
         setAllowedTiles(tiles);
-        const viewTile = { trackli: 'trackli', dates: 'dates' }[view];
+        const viewTile = { trackli: 'trackli', dates: 'dates', sexy: 'sexy' }[view];
         if (viewTile && tiles !== null && !tiles.includes(viewTile)) setView('home');
       })
       .catch(() => alive && setAllowedTiles([]));
@@ -257,10 +257,10 @@ export default function App() {
     );
   }
 
-  if (view === 'dates') {
+  if (view === 'dates' || view === 'sexy') {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
-        <FunDates user={user} onHome={() => setView('home')} />
+        <FunDates key={view} variant={view} user={user} onHome={() => setView('home')} />
         {accountModal}
       </div>
     );
