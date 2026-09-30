@@ -298,11 +298,11 @@ export default function LoginPanel() {
             <strong>Eure erste Aufgabe 💪</strong>
             <p>
               Was ist ein starker, positiver Leitsatz, der euch durch die nächsten Wochen tragen
-              wird? Macht daraus euer Passwort.
+              wird? Macht aus den Anfangsbuchstaben euer Passwort.
             </p>
             <p>
-              Beispiel: <em>„Unsere Liebe gewinnt immer“</em> kann zum Beispiel zu{' '}
-              <code>ULgI888!&lt;3</code> werden.
+              Beispiel: <em>„Unsere Liebe gewinnt immer“</em> kann zu{' '}
+              <code>ULgi888&lt;3</code> werden.
             </p>
             <details className="login-why">
               <summary>Warum?</summary>
