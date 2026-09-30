@@ -14,4 +14,5 @@ export const GOOD_NIGHT_TASKS = [
   { id: 'komplimente-er', title: 'Komplimente-Box füllen', hint: 'Er schreibt ein Kompliment in die Box, sie liest es laut vor.', icon: '💌' },
   { id: 'atmen', title: '3 tiefe Atemzüge', hint: '4 Sekunden ein, 6 Sekunden aus.', icon: '🌬️' },
   { id: 'box-breathing', title: 'Gemeinsames Box Breathing', hint: 'Dabei Hände halten. (Genaue Anleitung folgt.)', icon: '🫶' },
+  { id: 'affirmation-hintergrund', title: 'Handy-Hintergrund um eine Affirmation erweitern', icon: '📱' },
 ];
