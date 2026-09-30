@@ -1461,6 +1461,8 @@ textarea:focus-visible {
 
 .hub-loggedout {
   display: flex;
+  flex-direction: column;
+  text-align: center;
   align-items: center;
   justify-content: center;
   min-height: calc(100dvh - 64px);
@@ -2112,4 +2114,16 @@ textarea:focus-visible {
   border-left: 1px solid var(--color-line);
   border-top: 1px solid var(--color-line);
   transform: rotate(45deg);
+}
+
+.hub-welcome {
+  font-size: 2rem;
+  line-height: 1.15;
+  margin: 0 0 10px;
+}
+
+.hub-welcome-sub {
+  margin: 0 0 32px;
+  color: var(--color-text-soft);
+  font-size: 1.05rem;
 }

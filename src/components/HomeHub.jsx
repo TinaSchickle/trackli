@@ -15,6 +15,14 @@ export default function HomeHub({ user, allowedTiles, onOpen, onAccount }) {
   if (isCloudConfigured && !user) {
     return (
       <div className="screen hub hub-loggedout">
+        <h1 className="hub-welcome">
+          Herzlich willkommen
+          <br />
+          bei Trackli
+        </h1>
+        <p className="hub-welcome-sub">
+          Schön, dass ihr da seid <span className="hub-heart">&lt;3</span>
+        </p>
         <button type="button" className="hub-login-btn" onClick={onAccount}>
           Einloggen
         </button>
