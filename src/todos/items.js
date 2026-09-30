@@ -23,4 +23,13 @@ export const TODO_ITEMS = [
     icon: '🤝',
     notes: ['Auch schon bei erst 2 Klient*innen – damit die beiden sich verbinden können'],
   },
+  {
+    id: 'handy-hintergrund-affirmation',
+    title: 'Handy-Hintergrund um Affirmation erweitern',
+    icon: '📱',
+    notes: [
+      'Ist eine Aufgabe in Good Night',
+      'Herausfinden, wie man Affirmationen am einfachsten mit auf den Bildschirm bekommt',
+    ],
+  },
 ];
