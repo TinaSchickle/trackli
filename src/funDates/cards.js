@@ -36,9 +36,20 @@ export function optionFor(options, value) {
 // der gewählten Antworten, über die Fragen hinweg muss alles passen. Bei der
 // Dauer zählen auch kürzere Dates (wer 1 Stunde hat, schafft auch 30 min);
 // unbegrenzte Dates passen nur, wenn „Unbegrenzt“ gewählt ist.
+// „Beides“ wird im Quiz nicht abgefragt: solche Dates passen, wenn Indoor
+// und Outdoor gewählt sind.
+export const QUIZ_LOCATION_OPTIONS = LOCATION_OPTIONS.filter((o) => o.value !== 'both');
+
+// Beim Essen gibt es im Quiz zusätzlich „Egal“ – dann passt jede Karte.
+export const QUIZ_FOOD_OPTIONS = [...FOOD_OPTIONS, { value: 'any', label: 'Egal', icon: '🤷' }];
+
 export function matchesFilters(card, { locations, durations, foods }) {
-  if (!locations.includes(card.location)) return false;
-  if (!foods.includes(card.food)) return false;
+  const locationOk =
+    card.location === 'both'
+      ? locations.includes('indoor') && locations.includes('outdoor')
+      : locations.includes(card.location);
+  if (!locationOk) return false;
+  if (!foods.includes('any') && !foods.includes(card.food)) return false;
   if (durations.includes(null)) return true;
   const maxMinutes = Math.max(...durations);
   return card.duration != null && card.duration <= maxMinutes;

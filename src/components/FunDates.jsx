@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CARDS,
   LOCATION_OPTIONS,
+  QUIZ_LOCATION_OPTIONS,
+  QUIZ_FOOD_OPTIONS,
   DURATION_OPTIONS,
   FOOD_OPTIONS,
   optionFor,
@@ -45,9 +47,9 @@ const VARIANTS = {
 };
 
 const QUESTIONS = [
-  { key: 'locations', title: 'Worauf habt ihr heute Lust?', options: LOCATION_OPTIONS },
+  { key: 'locations', title: 'Worauf habt ihr heute Lust?', options: QUIZ_LOCATION_OPTIONS },
   { key: 'durations', title: 'Wie viel Zeit habt ihr?', options: DURATION_OPTIONS },
-  { key: 'foods', title: 'Mit Essen oder ohne?', options: FOOD_OPTIONS },
+  { key: 'foods', title: 'Mit Essen oder ohne?', options: QUIZ_FOOD_OPTIONS },
 ];
 
 // Pinnwand-Deko: Nadelfarben.
