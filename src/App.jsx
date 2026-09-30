@@ -12,12 +12,12 @@ import StatusTab from './components/StatusTab.jsx';
 import EvaluationTab from './components/EvaluationTab.jsx';
 import RulesTab from './components/RulesTab.jsx';
 import AppRulesTab from './components/AppRulesTab.jsx';
-import UsersTab from './components/UsersTab.jsx';
 import BackupModal from './components/BackupModal.jsx';
 import AccountModal from './components/AccountModal.jsx';
 import OvulationModal from './components/OvulationModal.jsx';
 import Nav, { TABS, visibleTabs } from './components/Nav.jsx';
 import HomeHub from './components/HomeHub.jsx';
+import { getMyTiles } from './cloud/tiles.js';
 import FunDates from './components/FunDates.jsx';
 import { formatDateDe } from './utils/nfp.js';
 
@@ -28,6 +28,8 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   // Startseite mit Kacheln ('home') oder ein geöffneter Bereich ('trackli', 'dates').
   const [view, setView] = useState('home');
+  // Kacheln, die dieses Konto sehen darf (null = alle, undefined = lädt).
+  const [allowedTiles, setAllowedTiles] = useState(undefined);
   const [tab, setTab] = useState('entry');
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [showBackup, setShowBackup] = useState(false);
@@ -158,6 +160,24 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Freigeschaltete Kacheln bei jedem Kontowechsel neu laden. Ein Bereich,
+  // der nicht (mehr) freigeschaltet ist, wird auch direkt verlassen.
+  useEffect(() => {
+    let alive = true;
+    getMyTiles(user)
+      .then((tiles) => {
+        if (!alive) return;
+        setAllowedTiles(tiles);
+        const viewTile = { trackli: 'trackli', dates: 'dates' }[view];
+        if (viewTile && tiles !== null && !tiles.includes(viewTile)) setView('home');
+      })
+      .catch(() => alive && setAllowedTiles([]));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const cycles = useMemo(() => segmentIntoCycles(entries), [entries]);
   const currentCycle = cycles.find((c) => c.isCurrent);
 
@@ -231,7 +251,7 @@ export default function App() {
   if (view === 'home') {
     return (
       <div className="app-shell" style={{ paddingBottom: 20 }}>
-        <HomeHub user={user} onOpen={setView} onAccount={() => setShowAccount(true)} />
+        <HomeHub user={user} allowedTiles={allowedTiles} onOpen={setView} onAccount={() => setShowAccount(true)} />
         {accountModal}
       </div>
     );
@@ -372,7 +392,6 @@ export default function App() {
         {activeTab === 'evaluation' && <EvaluationTab />}
         {activeTab === 'rules' && <RulesTab initialSign={guideSign} />}
         {activeTab === 'appRules' && <AppRulesTab />}
-        {activeTab === 'users' && <UsersTab currentUser={user} />}
         {activeTab === 'dashboard' && <Dashboard cycles={cycles} />}
       </div>
 

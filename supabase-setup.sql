@@ -318,3 +318,137 @@ drop policy if exists "selfies loeschen" on storage.objects;
 create policy "selfies loeschen" on storage.objects
   for delete to authenticated
   using (bucket_id = 'fun-date-selfies' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ── Admin-Seite: zentrale Admin-Prüfung ─────────────────────────────────────
+-- Eine einzige Stelle entscheidet, wer Admin ist. Alle Admin-Policies und
+-- -Funktionen unten (und die älteren, hier neu gesetzten) benutzen sie.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'tina.schickle@gmx.de';
+$$;
+
+drop policy if exists "profiles sichtbar" on public.profiles;
+create policy "profiles sichtbar"
+  on public.profiles
+  for select
+  using (id = auth.uid() or public.is_admin());
+
+drop policy if exists "invite codes nur admin" on public.invite_codes;
+create policy "invite codes nur admin"
+  on public.invite_codes
+  for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create or replace function public.admin_set_password(p_user uuid, p_password text)
+returns void
+language plpgsql
+security definer set search_path = public, extensions
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'NOT_ADMIN';
+  end if;
+  if length(coalesce(p_password, '')) < 6 then
+    raise exception 'PASSWORD_TOO_SHORT';
+  end if;
+  update auth.users
+     set encrypted_password = crypt(p_password, gen_salt('bf')),
+         updated_at = now()
+   where id = p_user;
+end;
+$$;
+
+-- ── Kachel-Freischaltung pro Paar ───────────────────────────────────────────
+-- Welche Dashboard-Kacheln ein Konto sieht. Neue Konten bekommen automatisch
+-- nur den Fragebogen; freischalten kann ausschließlich die Admin.
+create table if not exists public.tile_access (
+  user_id     uuid primary key references auth.users (id) on delete cascade,
+  tiles       text[] not null default array['questionnaire'],
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.tile_access enable row level security;
+
+drop policy if exists "tile access lesen" on public.tile_access;
+create policy "tile access lesen"
+  on public.tile_access
+  for select
+  using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "tile access nur admin schreibt" on public.tile_access;
+create policy "tile access nur admin schreibt"
+  on public.tile_access
+  for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+grant select, insert, update, delete on public.tile_access to authenticated;
+
+create or replace function public.handle_new_user_tiles()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.tile_access (user_id) values (new.id)
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_tiles on auth.users;
+create trigger on_auth_user_created_tiles
+  after insert on auth.users
+  for each row execute function public.handle_new_user_tiles();
+
+-- Bestehende Konten behalten, was sie bisher sahen (alle Kacheln).
+insert into public.tile_access (user_id, tiles)
+select id, array['questionnaire', 'trackli', 'dates', 'sexy'] from auth.users
+on conflict (user_id) do nothing;
+
+-- ── Übersicht für die Admin-Seite ───────────────────────────────────────────
+-- Ein Aufruf liefert alle Konten mit Namen, Anmeldedaten, freigeschalteten
+-- Kacheln und Fortschritt. Bewusst NICHT enthalten: Zyklusdaten und Selfies.
+create or replace function public.admin_overview()
+returns table (
+  user_id          uuid,
+  email            text,
+  username         text,
+  her_name         text,
+  his_name         text,
+  created_at       timestamptz,
+  last_sign_in_at  timestamptz,
+  tiles            text[],
+  dates_done       bigint,
+  dates_selfies    bigint
+)
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'NOT_ADMIN';
+  end if;
+  return query
+    select u.id,
+           u.email::text,
+           u.raw_user_meta_data ->> 'username',
+           u.raw_user_meta_data ->> 'her_name',
+           u.raw_user_meta_data ->> 'his_name',
+           u.created_at,
+           u.last_sign_in_at,
+           coalesce(t.tiles, array['questionnaire']),
+           (select count(*) from public.fun_dates_done d where d.user_id = u.id),
+           (select count(*) from public.fun_dates_done d where d.user_id = u.id and d.selfie_path is not null)
+      from auth.users u
+      left join public.tile_access t on t.user_id = u.id
+     order by u.created_at;
+end;
+$$;
+
+revoke execute on function public.admin_overview() from public, anon;
+grant execute on function public.admin_overview() to authenticated;

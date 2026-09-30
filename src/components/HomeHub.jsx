@@ -1,16 +1,12 @@
 import { getCoupleNames } from '../cloud/auth.js';
 import { isCloudConfigured } from '../cloud/supabase.js';
+import { HUB_TILES } from '../tiles.js';
 
-// Kacheln der Startseite. Weitere Bereiche kommen hier einfach dazu;
-// solange `active` false ist, wird die Kachel ausgegraut als „Bald" gezeigt.
-export const HUB_TILES = [
-  { key: 'questionnaire', title: 'Fragebogen', subtitle: 'Hier fängt alles an', icon: '📝', active: false },
-  { key: 'trackli', title: 'Trackli', subtitle: 'Zykluskalender nach Sensiplan', icon: '🌙', active: true },
-  { key: 'dates', title: 'Spaß-Dates', subtitle: 'Ideen für gemeinsame Zeit', icon: '🎈', active: true },
-  { key: 'sexy', title: 'Sexy Time', subtitle: 'Nur für euch zwei', icon: '🔥', active: false },
-];
 
-export default function HomeHub({ user, onOpen, onAccount }) {
+// allowedTiles: Kachel-Keys, die dieses Konto sehen darf (null = alle,
+// undefined = wird noch geladen). Gesetzt wird das pro Paar auf der
+// Admin-Seite; neue Paare sehen nur den Fragebogen.
+export default function HomeHub({ user, allowedTiles, onOpen, onAccount }) {
   const { her, him } = getCoupleNames(user);
   const names = [her, him].filter(Boolean).join(' & ');
 
@@ -61,7 +57,10 @@ export default function HomeHub({ user, onOpen, onAccount }) {
       )}
 
       <div className="hub-grid">
-        {HUB_TILES.map((t) => (
+        {(allowedTiles === undefined
+          ? []
+          : HUB_TILES.filter((t) => allowedTiles === null || allowedTiles.includes(t.key))
+        ).map((t) => (
           <button
             key={t.key}
             type="button"

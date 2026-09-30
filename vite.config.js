@@ -28,6 +28,16 @@ function serviceWorkerBuildId() {
 export default defineConfig({
   plugins: [react(), serviceWorkerBuildId()],
   base: './',
+  // Zwei Seiten: die App der Paare (index.html) und die getrennte
+  // Admin-Seite (admin.html), die nirgends in der App verlinkt ist.
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        admin: 'admin.html',
+      },
+    },
+  },
   // Cache außerhalb von OneDrive: Sync-Locks auf node_modules/.vite führen
   // sonst zu inkonsistenten Dep-Optimierungen (doppelte React-Kopien).
   cacheDir: join(tmpdir(), 'trackli-vite-cache'),
