@@ -38,4 +38,14 @@ export const TODO_ITEMS = [
       'Empfehlung: In der Good-Night-Aufgabe Möglichkeit 1 per kurzem Video zeigen; Möglichkeit 2 als spätere Erweiterung merken.',
     ],
   },
+  {
+    id: 'partner-meditation',
+    title: 'Partner-Meditation',
+    icon: '🧘',
+    notes: [
+      'Erinnere dich an deine Lieblings-Sex-Erfahrung – und daran, wo dein Partner dich dort berührt hat',
+      'Nimm seine Hand und lege sie auf diese Stellen; atmet gemeinsam in die Erinnerung hinein',
+      'Öffnet die Augen, schaut euch an und lasst die Bilder und Gefühle weiter hochkommen',
+    ],
+  },
 ];
