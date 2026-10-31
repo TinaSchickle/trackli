@@ -48,4 +48,11 @@ export const TODO_ITEMS = [
       'Öffnet die Augen, schaut euch an und lasst die Bilder und Gefühle weiter hochkommen',
     ],
   },
+  { id: 'yoni-steaming', title: 'Yoni Steaming', icon: '♨️' },
+  {
+    id: 'unterleibswickel',
+    title: 'Unterleibswickel',
+    icon: '🌡️',
+    notes: ['Siehe PCOS im Isolde-Richter-Kurs, Tag 4'],
+  },
 ];
