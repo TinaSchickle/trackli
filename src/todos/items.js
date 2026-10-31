@@ -55,4 +55,5 @@ export const TODO_ITEMS = [
     icon: '🌡️',
     notes: ['Siehe PCOS im Isolde-Richter-Kurs, Tag 4'],
   },
+  { id: 'therapeutische-frauenmassage', title: 'Therapeutische Frauenmassage', icon: '💆‍♀️' },
 ];
