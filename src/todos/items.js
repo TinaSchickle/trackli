@@ -62,7 +62,7 @@ export const TODO_ITEMS = [
     icon: '👶',
     notes: [
       'Warum wollen wir ein Kind?',
-      'Wie wollen wir als Eltern sein? (Weiterarbeiten, Elternzeit, Schuldbilder)',
+      'Wie wollen wir als Eltern sein? (Weiterarbeiten, Elternzeit, Schuldbilder, Schulbildung)',
       'Vision eines perfekten Alltags im Team',
       'Perfekter Alltag, wenn man nur an sich selbst denkt',
       'Idee: Fragen einzeln nach und nach zeigen',
