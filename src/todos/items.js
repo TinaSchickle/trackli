@@ -56,4 +56,17 @@ export const TODO_ITEMS = [
     notes: ['Siehe PCOS im Isolde-Richter-Kurs, Tag 4'],
   },
   { id: 'therapeutische-frauenmassage', title: 'Therapeutische Frauenmassage', icon: '💆‍♀️' },
+  {
+    id: 'kinderwunsch-fragen',
+    title: 'Kinderwunsch: Fragen fürs Paar',
+    icon: '👶',
+    notes: [
+      'Warum wollen wir ein Kind?',
+      'Wie wollen wir als Eltern sein? (Weiterarbeiten, Elternzeit, Schuldbilder)',
+      'Vision eines perfekten Alltags im Team',
+      'Perfekter Alltag, wenn man nur an sich selbst denkt',
+      'Idee: Fragen einzeln nach und nach zeigen',
+      'Ablauf: jeder schreibt in Stichpunkten auf, danach austauschen',
+    ],
+  },
 ];
